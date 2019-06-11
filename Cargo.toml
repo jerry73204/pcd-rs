@@ -3,6 +3,13 @@ name = "pcd-rs"
 version = "0.1.0"
 authors = ["jerry73204 <jerry73204@gmail.com>"]
 edition = "2018"
+description = "Read PCD file format in Rust"
+categories = ["parser"]
+documentation = "https://docs.rs/pcd-rs/0.1.0/pcd-rs/"
+repository = "https://github.com/jerry73204/pcd-rs"
+homepage = "https://github.com/jerry73204/pcd-rs"
+license = "MIT"
+license-file = "LICENSE"
 
 [dependencies]
 byteorder = "^1"
