@@ -1,8 +1,7 @@
 extern crate byteorder;
-extern crate memmap;
+// extern crate memmap;
 #[macro_use] extern crate log;
 
-// use std::ops::{Index, Range};
 use std::io::prelude::*;
 use std::io::{BufReader, Cursor};
 use std::path::Path;
@@ -14,8 +13,10 @@ use byteorder::{LittleEndian, ReadBytesExt};
 
 type PCDResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 
+/// Used to configure LCD file readers.
 pub struct ReaderOptions {}
 
+/// Sequential point loader for PCD files.
 pub struct SeqReader<T> {
     pub meta: PCDMeta,
     line_count: usize,
@@ -23,6 +24,7 @@ pub struct SeqReader<T> {
     reader: BufReader<T>,
 }
 
+/// The struct keep meta data of PCD file.
 #[derive(Debug)]
 pub struct PCDMeta {
     pub version: String,
@@ -34,22 +36,26 @@ pub struct PCDMeta {
     pub field_defs: Vec<FieldDef>,
 }
 
+/// The error is raised when a PCD file is not understood by parser.
 #[derive(Clone)]
 pub struct ParseError {
     desc: String,
 }
 
+/// The enum specifies one of signed, unsigned integers, and floating point number type to the field.
 #[derive(Debug)]
-pub enum TypeKind {
+enum TypeKind {
     I, U, F
 }
 
+/// The enum indicates whether the point cloud data is encoded in ASCII or binary.
 #[derive(Debug)]
 pub enum DataKind {
     ASCII,
     Binary,
 }
 
+/// The enum specifies the exact type for each PCD field.
 #[derive(Debug)]
 pub enum ValueKind {
     U8, U16, U32,
@@ -57,6 +63,7 @@ pub enum ValueKind {
     F32, F64,
 }
 
+/// The enum holds the exact value of each PCD field.
 #[derive(Debug)]
 pub enum Value {
     U8(u8),
@@ -77,6 +84,7 @@ pub enum Value {
     F64V(Vec<f64>),
 }
 
+/// Define the properties of a PCD field.
 #[derive(Debug)]
 pub struct FieldDef {
     name: String,
@@ -85,17 +93,19 @@ pub struct FieldDef {
 }
 
 impl ReaderOptions {
+    /// Load PCD file from path.
     pub fn from_path<P: AsRef<Path>>(path: P) -> PCDResult<SeqReader<File>> {
         let file = File::open(path)?;
         Self::from_reader(file)
     }
 
+    /// Parse PCD file buffer.
     pub fn from_buffer(buf: &[u8]) -> PCDResult<SeqReader<Cursor<&[u8]>>> {
         let reader = Cursor::new(buf);
         Self::from_reader(reader)
     }
 
-
+    /// Load PCD data from reader.
     pub fn from_reader<R: Read>(reader: R) -> PCDResult<SeqReader<R>> {
         let mut buf_reader = BufReader::new(reader);
         let mut line_count = 0;
