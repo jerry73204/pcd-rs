@@ -1,7 +1,10 @@
 [package]
 name = "pcd-rs"
 version = "0.1.0"
-authors = ["aeon"]
+authors = ["jerry73204 <jerry73204@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+byteorder = "^1"
+log = "^0.4"
+# memmap = "^0"
