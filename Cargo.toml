@@ -1,6 +1,6 @@
 [package]
 name = "pcd-rs"
-version = "0.1.2"
+version = "0.2.0"
 authors = ["jerry73204 <jerry73204@gmail.com>"]
 edition = "2018"
 description = "Read PCD file format in Rust"
@@ -8,10 +8,8 @@ categories = ["parsing"]
 documentation = "https://docs.rs/pcd-rs/"
 repository = "https://github.com/jerry73204/pcd-rs"
 homepage = "https://github.com/jerry73204/pcd-rs"
-license = "MIT"
 license-file = "LICENSE"
 
 [dependencies]
-byteorder = "^1"
-log = "^0.4"
-# memmap = "^0"
+byteorder = "~1"
+failure = "~0"
