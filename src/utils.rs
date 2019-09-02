@@ -1,243 +1,304 @@
-use crate::{error::ParseError, FieldDef, Value, ValueKind};
-use byteorder::{LittleEndian, ReadBytesExt};
+use crate::{error::PCDError, DataKind, FieldDef, PCDMeta, TypeKind, ValueKind};
 use failure::Fallible;
-use std::io::prelude::*;
+use std::{collections::HashSet, io::prelude::*};
 
-pub fn scan_line<R: BufRead>(
-    reader: &mut R,
-    field_defs: &[FieldDef],
-    line_count: &mut usize,
-) -> Fallible<Vec<Value>> {
-    let make_error = |line_num| {
-        let desc = format!("Invalid data line at line {}", line_num);
-        ParseError::new(&desc)
+pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Fallible<PCDMeta> {
+    let mut get_meta_line = |expect_entry: &str| -> Fallible<_> {
+        loop {
+            let mut line = String::new();
+            let read_size = reader.read_line(&mut line)?;
+            *line_count += 1;
+
+            if read_size == 0 {
+                return Err(
+                    PCDError::new_parse_error(*line_count, "Unexpected end of file").into(),
+                );
+            }
+
+            let line_stripped = match line.split('#').nth(0) {
+                Some("") => continue,
+                Some(remaining) => remaining,
+                None => continue,
+            };
+
+            let tokens: Vec<String> = line_stripped
+                .split_ascii_whitespace()
+                .map(|s| s.to_owned())
+                .collect();
+
+            if tokens.is_empty() {
+                let desc = format!("Cannot parse empty line at line {}", *line_count + 1);
+                return Err(PCDError::new_parse_error(*line_count, &desc).into());
+            }
+
+            if tokens[0] != expect_entry {
+                let desc = format!(
+                    "Expect {:?} entry, found {:?} at line {}",
+                    expect_entry,
+                    tokens[0],
+                    *line_count + 1
+                );
+                return Err(PCDError::new_parse_error(*line_count, &desc).into());
+            }
+
+            return Ok(tokens);
+        }
     };
 
-    // Tokenize line
-    let mut line = String::new();
-    let read_size = reader.read_line(&mut line)?;
-    *line_count += 1;
+    let meta_version = {
+        let tokens = get_meta_line("VERSION")?;
+        if tokens.len() == 2 {
+            match tokens[1].as_str() {
+                "0.7" => String::from("0.7"),
+                ".7" => String::from("0.7"),
+                _ => {
+                    let desc = format!(
+                        "Unsupported version {:?}. Supported versions are: 0.7",
+                        tokens[1]
+                    );
+                    return Err(PCDError::new_parse_error(*line_count, &desc).into());
+                }
+            }
+        } else {
+            return Err(
+                PCDError::new_parse_error(*line_count, "VERSION line is not understood").into(),
+            );
+        }
+    };
 
-    if read_size == 0 {
-        let desc = format!("Unexpected end of file at line {}", line_count);
-        return Err(ParseError::new(&desc).into());
+    let meta_fields = {
+        let tokens = get_meta_line("FIELDS")?;
+        if tokens.len() == 1 {
+            return Err(
+                PCDError::new_parse_error(*line_count, "FIELDS line is not understood").into(),
+            );
+        }
+
+        let mut name_set = HashSet::new();
+        let mut field_names: Vec<String> = vec![];
+
+        for tk in tokens[1..].into_iter() {
+            let field = tk;
+            if name_set.contains(field) {
+                let desc = format!("field name {:?} is specified more than once", field);
+                return Err(PCDError::new_parse_error(*line_count, &desc).into());
+            }
+
+            name_set.insert(field);
+            field_names.push(field.to_owned());
+        }
+
+        field_names
+    };
+
+    let meta_size = {
+        let tokens = get_meta_line("SIZE")?;
+        if tokens.len() == 1 {
+            return Err(
+                PCDError::new_parse_error(*line_count, "SIZE line is not understood").into(),
+            );
+        }
+
+        let mut sizes = vec![];
+        for tk in tokens[1..].into_iter() {
+            let size: u64 = tk.parse()?;
+            sizes.push(size);
+        }
+
+        sizes
+    };
+
+    let meta_type = {
+        let tokens = get_meta_line("TYPE")?;
+
+        if tokens.len() == 1 {
+            return Err(
+                PCDError::new_parse_error(*line_count, "TYPE line is not understood").into(),
+            );
+        }
+
+        let mut types = vec![];
+        for type_char in tokens[1..].into_iter() {
+            let type_ = match type_char.as_str() {
+                "I" => TypeKind::I,
+                "U" => TypeKind::U,
+                "F" => TypeKind::F,
+                _ => {
+                    let desc = format!("Invalid type character {:?} in TYPE line", type_char);
+                    return Err(PCDError::new_parse_error(*line_count, &desc).into());
+                }
+            };
+            types.push(type_);
+        }
+
+        types
+    };
+
+    let meta_count = {
+        let tokens = get_meta_line("COUNT")?;
+
+        if tokens.len() == 1 {
+            return Err(
+                PCDError::new_parse_error(*line_count, "COUNT line is not understood").into(),
+            );
+        }
+
+        let mut counts = vec![];
+        for tk in tokens[1..].into_iter() {
+            let count: u64 = tk.parse()?;
+            counts.push(count);
+        }
+
+        counts
+    };
+
+    let meta_width = {
+        let tokens = get_meta_line("WIDTH")?;
+
+        if tokens.len() != 2 {
+            return Err(
+                PCDError::new_parse_error(*line_count, "WIDTH line is not understood").into(),
+            );
+        }
+
+        let width: u64 = tokens[1].parse()?;
+        width
+    };
+
+    let meta_height = {
+        let tokens = get_meta_line("HEIGHT")?;
+        if tokens.len() != 2 {
+            return Err(
+                PCDError::new_parse_error(*line_count, "HEIGHT line is not understood").into(),
+            );
+        }
+
+        let height: u64 = tokens[1].parse()?;
+        height
+    };
+
+    let meta_viewpoint = {
+        let tokens = get_meta_line("VIEWPOINT")?;
+
+        if tokens.len() == 1 {
+            return Err(
+                PCDError::new_parse_error(*line_count, "VIEWPOINT line is not understood").into(),
+            );
+        }
+
+        let mut params = vec![];
+        for tk in tokens[1..].into_iter() {
+            let param: u64 = tk.parse()?;
+            params.push(param);
+        }
+
+        params
+    };
+
+    let meta_points = {
+        let tokens = get_meta_line("POINTS")?;
+
+        if tokens.len() != 2 {
+            return Err(
+                PCDError::new_parse_error(*line_count, "POINTS line is not understood").into(),
+            );
+        }
+
+        let count: u64 = tokens[1].parse()?;
+        count
+    };
+
+    let meta_data = {
+        let tokens = get_meta_line("DATA")?;
+
+        if tokens.len() != 2 {
+            return Err(
+                PCDError::new_parse_error(*line_count, "DATA line is not understood").into(),
+            );
+        }
+
+        match tokens[1].as_str() {
+            "ascii" => DataKind::ASCII,
+            "binary" => DataKind::Binary,
+            _ => {
+                return Err(
+                    PCDError::new_parse_error(*line_count, "DATA line is not understood").into(),
+                );
+            }
+        }
+    };
+
+    // Check integrity
+    if meta_size.len() != meta_fields.len() {
+        return Err(PCDError::new_parse_error(
+            *line_count,
+            "SIZE entry conflicts with FIELD entry",
+        )
+        .into());
     }
 
-    let mut tokens = line.split_ascii_whitespace();
-
-    let mut row = vec![];
-
-    for meta in field_defs {
-        let value = match (&meta.kind, meta.count) {
-            (ValueKind::U8, 1) => {
-                let val: u8 = tokens.next().ok_or(make_error(*line_count))?.parse()?;
-                Value::U8(val)
-            }
-            (ValueKind::U16, 1) => {
-                let val: u16 = tokens.next().ok_or(make_error(*line_count))?.parse()?;
-                Value::U16(val)
-            }
-            (ValueKind::U32, 1) => {
-                let val: u32 = tokens.next().ok_or(make_error(*line_count))?.parse()?;
-                Value::U32(val)
-            }
-            (ValueKind::I8, 1) => {
-                let val: i8 = tokens.next().ok_or(make_error(*line_count))?.parse()?;
-                Value::I8(val)
-            }
-            (ValueKind::I16, 1) => {
-                let val: i16 = tokens.next().ok_or(make_error(*line_count))?.parse()?;
-                Value::I16(val)
-            }
-            (ValueKind::I32, 1) => {
-                let val: i32 = tokens.next().ok_or(make_error(*line_count))?.parse()?;
-                Value::I32(val)
-            }
-            (ValueKind::F32, 1) => {
-                let val: f32 = tokens.next().ok_or(make_error(*line_count))?.parse()?;
-                Value::F32(val)
-            }
-            (ValueKind::F64, 1) => {
-                let val: f64 = tokens.next().ok_or(make_error(*line_count))?.parse()?;
-                Value::F64(val)
-            }
-            (ValueKind::U8, _) => {
-                let mut values = vec![];
-                for _ in 0..(meta.count) {
-                    let val: u8 = tokens.next().ok_or(make_error(*line_count))?.parse()?;
-                    values.push(val);
-                }
-                Value::U8V(values)
-            }
-            (ValueKind::U16, _) => {
-                let mut values = vec![];
-                for _ in 0..(meta.count) {
-                    let val: u16 = tokens.next().ok_or(make_error(*line_count))?.parse()?;
-                    values.push(val);
-                }
-                Value::U16V(values)
-            }
-            (ValueKind::U32, _) => {
-                let mut values = vec![];
-                for _ in 0..(meta.count) {
-                    let val: u32 = tokens.next().ok_or(make_error(*line_count))?.parse()?;
-                    values.push(val);
-                }
-                Value::U32V(values)
-            }
-            (ValueKind::I8, _) => {
-                let mut values = vec![];
-                for _ in 0..(meta.count) {
-                    let val: i8 = tokens.next().ok_or(make_error(*line_count))?.parse()?;
-                    values.push(val);
-                }
-                Value::I8V(values)
-            }
-            (ValueKind::I16, _) => {
-                let mut values = vec![];
-                for _ in 0..(meta.count) {
-                    let val: i16 = tokens.next().ok_or(make_error(*line_count))?.parse()?;
-                    values.push(val);
-                }
-                Value::I16V(values)
-            }
-            (ValueKind::I32, _) => {
-                let mut values = vec![];
-                for _ in 0..(meta.count) {
-                    let val: i32 = tokens.next().ok_or(make_error(*line_count))?.parse()?;
-                    values.push(val);
-                }
-                Value::I32V(values)
-            }
-            (ValueKind::F32, _) => {
-                let mut values = vec![];
-                for _ in 0..(meta.count) {
-                    let val: f32 = tokens.next().ok_or(make_error(*line_count))?.parse()?;
-                    values.push(val);
-                }
-                Value::F32V(values)
-            }
-            (ValueKind::F64, _) => {
-                let mut values = vec![];
-                for _ in 0..(meta.count) {
-                    let val: f64 = tokens.next().ok_or(make_error(*line_count))?.parse()?;
-                    values.push(val);
-                }
-                Value::F64V(values)
-            }
-        };
-
-        row.push(value);
+    if meta_type.len() != meta_fields.len() {
+        return Err(PCDError::new_parse_error(
+            *line_count,
+            "TYPE entry conflicts with FIELD entry",
+        )
+        .into());
     }
 
-    Ok(row)
-}
-
-pub fn scan_chunk<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Fallible<Vec<Value>> {
-    let mut row = vec![];
-
-    for meta in field_defs {
-        let value = match (&meta.kind, meta.count) {
-            (ValueKind::U8, 1) => {
-                let val = reader.read_u8()?;
-                Value::U8(val)
-            }
-            (ValueKind::U16, 1) => {
-                let val = reader.read_u16::<LittleEndian>()?;
-                Value::U16(val)
-            }
-            (ValueKind::U32, 1) => {
-                let val = reader.read_u32::<LittleEndian>()?;
-                Value::U32(val)
-            }
-            (ValueKind::I8, 1) => {
-                let val = reader.read_i8()?;
-                Value::I8(val)
-            }
-            (ValueKind::I16, 1) => {
-                let val = reader.read_i16::<LittleEndian>()?;
-                Value::I16(val)
-            }
-            (ValueKind::I32, 1) => {
-                let val = reader.read_i32::<LittleEndian>()?;
-                Value::I32(val)
-            }
-            (ValueKind::F32, 1) => {
-                let val = reader.read_f32::<LittleEndian>()?;
-                Value::F32(val)
-            }
-            (ValueKind::F64, 1) => {
-                let val = reader.read_f64::<LittleEndian>()?;
-                Value::F64(val)
-            }
-            (ValueKind::U8, _) => {
-                let mut values = vec![];
-                for _ in 0..(meta.count) {
-                    let val = reader.read_u8()?;
-                    values.push(val);
-                }
-                Value::U8V(values)
-            }
-            (ValueKind::U16, _) => {
-                let mut values = vec![];
-                for _ in 0..(meta.count) {
-                    let val = reader.read_u16::<LittleEndian>()?;
-                    values.push(val);
-                }
-                Value::U16V(values)
-            }
-            (ValueKind::U32, _) => {
-                let mut values = vec![];
-                for _ in 0..(meta.count) {
-                    let val = reader.read_u32::<LittleEndian>()?;
-                    values.push(val);
-                }
-                Value::U32V(values)
-            }
-            (ValueKind::I8, _) => {
-                let mut values = vec![];
-                for _ in 0..(meta.count) {
-                    let val = reader.read_i8()?;
-                    values.push(val);
-                }
-                Value::I8V(values)
-            }
-            (ValueKind::I16, _) => {
-                let mut values = vec![];
-                for _ in 0..(meta.count) {
-                    let val = reader.read_i16::<LittleEndian>()?;
-                    values.push(val);
-                }
-                Value::I16V(values)
-            }
-            (ValueKind::I32, _) => {
-                let mut values = vec![];
-                for _ in 0..(meta.count) {
-                    let val = reader.read_i32::<LittleEndian>()?;
-                    values.push(val);
-                }
-                Value::I32V(values)
-            }
-            (ValueKind::F32, _) => {
-                let mut values = vec![];
-                for _ in 0..(meta.count) {
-                    let val = reader.read_f32::<LittleEndian>()?;
-                    values.push(val);
-                }
-                Value::F32V(values)
-            }
-            (ValueKind::F64, _) => {
-                let mut values = vec![];
-                for _ in 0..(meta.count) {
-                    let val = reader.read_f64::<LittleEndian>()?;
-                    values.push(val);
-                }
-                Value::F64V(values)
-            }
-        };
-
-        row.push(value);
+    if meta_count.len() != meta_fields.len() {
+        return Err(PCDError::new_parse_error(
+            *line_count,
+            "COUNT entry conflicts with FIELD entry",
+        )
+        .into());
     }
 
-    Ok(row)
+    // Organize field type
+    let field_defs = {
+        let mut field_defs = vec![];
+        for (((name, type_), size), count) in meta_fields
+            .iter()
+            .zip(meta_type.iter())
+            .zip(meta_size.iter())
+            .zip(meta_count.iter())
+        {
+            let kind = match (type_, size) {
+                (TypeKind::U, 1) => ValueKind::U8,
+                (TypeKind::U, 2) => ValueKind::U16,
+                (TypeKind::U, 4) => ValueKind::U32,
+                (TypeKind::I, 1) => ValueKind::I8,
+                (TypeKind::I, 2) => ValueKind::I16,
+                (TypeKind::I, 4) => ValueKind::I32,
+                (TypeKind::F, 4) => ValueKind::F32,
+                (TypeKind::F, 8) => ValueKind::F64,
+                _ => {
+                    let desc =
+                        format!("Field type {:?} with size {} is not supported", type_, size);
+                    return Err(PCDError::new_parse_error(*line_count, &desc).into());
+                }
+            };
+
+            let meta = FieldDef {
+                name: name.to_owned(),
+                kind,
+                count: *count,
+            };
+
+            field_defs.push(meta);
+        }
+
+        field_defs
+    };
+
+    let meta = PCDMeta {
+        version: meta_version,
+        field_defs,
+        width: meta_width,
+        height: meta_height,
+        viewpoint: meta_viewpoint,
+        num_records: meta_points,
+        data: meta_data,
+    };
+
+    Ok(meta)
 }

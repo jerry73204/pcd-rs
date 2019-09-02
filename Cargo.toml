@@ -13,3 +13,4 @@ license-file = "LICENSE"
 [dependencies]
 byteorder = "~1"
 failure = "~0"
+pcd-rs-derive = { version = "~0", path = "pcd-rs-derive" }

@@ -6,32 +6,42 @@
 //!
 //! ```rust
 //! use failure::Fallible;
-//! use pcd_rs::SeqReaderOptions;
+//! use pcd_rs::{SeqReaderBuilder, PCDRecord};
 //! use std::path::Path;
 //!
+//! #[derive(PCDRecord)]
+//! pub struct Point {
+//!     x: f32,
+//!     y: f32,
+//!     z: f32,
+//!     w: f32,
+//! }
+//!
 //! fn main() -> Fallible<()> {
-//!     let path = Path::new("test_files/ascii.pcd");
-//!     let reader = SeqReaderOptions::from_path(path)?;
-//!
-//!     // Get meta data
-//!     let meta = reader.meta();
-//!
-//!     // Scan all points
-//!     let points = reader.collect::<Fallible<Vec<_>>>()?;
-//!
+//!     let reader = SeqReaderBuilder::open_path("test_files/ascii.pcd")?;
+//!     let points = reader.collect::<Fallible<Vec<Point>>>()?;
+//!     assert_eq!(points.len(), 213);
 //!     Ok(())
 //! }
 //! ```
 
-extern crate byteorder;
+// #![feature(const_generics)]
+
+pub extern crate byteorder;
 #[macro_use]
-extern crate failure;
+pub extern crate failure;
+extern crate pcd_rs_derive;
 
 pub mod error;
+mod record;
 mod seq_reader;
 mod utils;
 
-pub use seq_reader::{SeqReader, SeqReaderOptions};
+#[doc(hidden)]
+pub use pcd_rs_derive::*;
+pub use record::PCDRecord;
+pub use seq_reader::{SeqReader, SeqReaderBuilder};
+#[doc(hidden)]
 
 /// The struct keep meta data of PCD file.
 #[derive(Debug)]
@@ -40,13 +50,13 @@ pub struct PCDMeta {
     pub width: u64,
     pub height: u64,
     pub viewpoint: Vec<u64>,
-    pub num_points: u64,
+    pub num_records: u64,
     pub data: DataKind,
     pub field_defs: Vec<FieldDef>,
 }
 
 /// The enum specifies one of signed, unsigned integers, and floating point number type to the field.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 enum TypeKind {
     I,
     U,
@@ -54,14 +64,14 @@ enum TypeKind {
 }
 
 /// The enum indicates whether the point cloud data is encoded in ASCII or binary.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DataKind {
     ASCII,
     Binary,
 }
 
 /// The enum specifies the exact type for each PCD field.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ValueKind {
     U8,
     U16,
@@ -73,31 +83,10 @@ pub enum ValueKind {
     F64,
 }
 
-/// The enum holds the exact value of each PCD field.
-#[derive(Debug)]
-pub enum Value {
-    U8(u8),
-    U16(u16),
-    U32(u32),
-    I8(i8),
-    I16(i16),
-    I32(i32),
-    F32(f32),
-    F64(f64),
-    U8V(Vec<u8>),
-    U16V(Vec<u16>),
-    U32V(Vec<u32>),
-    I8V(Vec<i8>),
-    I16V(Vec<i16>),
-    I32V(Vec<i32>),
-    F32V(Vec<f32>),
-    F64V(Vec<f64>),
-}
-
 /// Define the properties of a PCD field.
 #[derive(Debug)]
 pub struct FieldDef {
-    name: String,
-    kind: ValueKind,
-    count: u64,
+    pub name: String,
+    pub kind: ValueKind,
+    pub count: u64,
 }
