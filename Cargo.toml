@@ -8,6 +8,7 @@ categories = ["parsing"]
 documentation = "https://docs.rs/pcd-rs/"
 repository = "https://github.com/jerry73204/pcd-rs"
 homepage = "https://github.com/jerry73204/pcd-rs"
+readme = "README.md"
 license-file = "LICENSE"
 
 [dependencies]
