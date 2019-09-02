@@ -1,7 +1,7 @@
 # pcd-rs: Read point cloud data from **PCD** file format
 
-`pcd-rs` allows you to parse PCD point cloud data from a file,
-a path, or a binary buffer. The reader implements `Iterator` to
+`pcd-rs` allows you to parse PCD point cloud data from a file or
+a binary buffer. The reader implements `Iterator` to
 let you iterate over points with ease.
 
 ## Usage
@@ -9,29 +9,35 @@ let you iterate over points with ease.
 Add pcd-rs to your `Cargo.toml`.
 
 ```toml
-pcd_rs = "~0"
+pcd_rs = "*"
 ```
 
 ## Example
 
 ```rust
 use failure::Fallible;
-use pcd_rs::SeqReaderOptions;
+use pcd_rs::{PCDRecord, SeqReaderBuilder};
 use std::path::Path;
 
-fn main() -> Fallible<()> {
-    let path = Path::new("test_files/ascii.pcd");
-    let reader = SeqReaderOptions::from_path(path)?;
+#[derive(PCDRecord)]
+pub struct Point {
+    x: f32,
+    y: f32,
+    z: f32,
+    timestamp: u32,
+}
 
-    // Get meta data
-    let meta = reader.meta();
-
-    // Scan all points
-    let points = reader.collect::<Fallible<Vec<_>>>()?;
-
+#[test]
+fn load_binary() -> Fallible<()> {
+    let path = Path::new("test_files/binary.pcd");
+    let reader = SeqReaderBuilder::open_path(path)?;
+    let points = reader.collect::<Fallible<Vec<Point>>>()?;
+    assert_eq!(points.len(), 28944);
     Ok(())
 }
 ```
+
+You may visit [tests directory](tests) for more examples.
 
 ## License
 
