@@ -1,4 +1,4 @@
-//! The module defines [PCDRecord](pcd_rs::PCDRecord) trait, which is
+//! The module defines [PCDRecord](crate::PCDRecord) trait, which is
 //! analogous to a _point_ in PCD data.
 //! Any object scanned by readers and written by writers should implement
 //! this trait.
