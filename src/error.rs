@@ -10,8 +10,8 @@ pub enum PCDError {
         expect, found
     )]
     SchemaMismatchError {
-        expect: Vec<(ValueKind, Option<usize>)>,
-        found: Vec<(ValueKind, usize)>,
+        expect: Vec<(Option<String>, ValueKind, Option<usize>)>,
+        found: Vec<(String, ValueKind, usize)>,
     },
     #[fail(
         display = "Expects {:?} elements in \"field\", but found {:?} elements in record",
@@ -40,13 +40,19 @@ impl PCDError {
     }
 
     pub fn new_schema_mismatch_error(
-        record_fields: &[(ValueKind, Option<usize>)],
+        record_fields: &[(Option<String>, ValueKind, Option<usize>)],
         file_fields: &[FieldDef],
     ) -> PCDError {
         let expect = record_fields.to_vec();
         let found = file_fields
             .iter()
-            .map(|field_def| (field_def.kind, field_def.count as usize))
+            .map(|field_def| {
+                (
+                    field_def.name.to_owned(),
+                    field_def.kind,
+                    field_def.count as usize,
+                )
+            })
             .collect::<Vec<_>>();
         PCDError::SchemaMismatchError { expect, found }
     }

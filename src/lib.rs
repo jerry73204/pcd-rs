@@ -36,13 +36,13 @@ extern crate regex;
 pub mod error;
 mod record;
 mod seq_reader;
+mod seq_writer;
 mod utils;
-mod writer;
 
 pub use pcd_rs_derive::*;
 pub use record::{PCDRecordRead, PCDRecordWrite};
 pub use seq_reader::{SeqReader, SeqReaderBuilder};
-pub use writer::{SeqWriter, SeqWriterBuilder};
+pub use seq_writer::{SeqWriter, SeqWriterBuilder};
 
 /// The struct keep meta data of PCD file.
 #[derive(Debug)]

@@ -1,8 +1,10 @@
 use proc_macro2::TokenStream;
 use quote::quote;
+use regex::Regex;
 use syn::{
-    spanned::Spanned, Data, DeriveInput, Error as SynError, Fields, FieldsNamed, FieldsUnnamed,
-    GenericArgument, Ident, PathArguments, Result as SynResult, Type, TypeArray, TypePath,
+    spanned::Spanned, Attribute, Data, DeriveInput, Error as SynError, Fields, FieldsNamed,
+    FieldsUnnamed, GenericArgument, Ident, Lit, Meta, NestedMeta, PathArguments,
+    Result as SynResult, Type, TypeArray, TypePath,
 };
 
 struct DerivedTokens {
@@ -54,7 +56,7 @@ pub fn f_pcd_record_read_derive(input: DeriveInput) -> SynResult<TokenStream> {
 
     let expanded = quote! {
         impl pcd_rs::PCDRecordRead for #struct_name {
-            fn read_spec() -> Vec<(pcd_rs::ValueKind, Option<usize>)> {
+            fn read_spec() -> Vec<(Option<String>, pcd_rs::ValueKind, Option<usize>)> {
                 #read_spec_tokens
             }
 
@@ -107,6 +109,20 @@ fn derive_named_fields(struct_name: &Ident, fields: &FieldsNamed) -> SynResult<D
                 "Type of struct field must be a primitive type, array of primitive type, or Vec<_> of primitive type",
             );
             let field_ident = format_ident!("{}", &field.ident.as_ref().unwrap());
+
+            // Check #[pcd_rename(...)] and #[pcd_ignore_name] attributes
+            let pcd_name_opt = {
+                let (rename_opt, ignore_name) = parse_field_attributes(&field.attrs)?;
+
+                if ignore_name {
+                    None
+                } else if let Some(name) = rename_opt {
+                    Some(name)
+                } else {
+                    Some(field_ident.to_string())
+                }
+            };
+
             let tokens = match &field.ty {
                 Type::Array(array) => {
                     derive_array_field(&field_ident, array)
@@ -121,15 +137,21 @@ fn derive_named_fields(struct_name: &Ident, fields: &FieldsNamed) -> SynResult<D
                 }
             };
 
-            Ok((field_ident, tokens))
+            Ok((field_ident, pcd_name_opt, tokens))
         })
         .collect::<SynResult<Vec<_>>>()?
         .into_iter()
         .fold(
             (vec![], vec![], vec![], vec![]),
-            |(mut field_idents, mut read_specs, mut bin_read_fields, mut text_read_fields), (field_ident, tokens)| {
+            |(mut field_idents, mut read_specs, mut bin_read_fields, mut text_read_fields), (field_ident, pcd_name_opt, tokens)| {
+                let read_spec_tokens = tokens.read_spec_tokens;
+                let read_spec = match pcd_name_opt {
+                    Some(name) => quote!{ (Some(#name.to_owned()), #read_spec_tokens) },
+                    None => quote!{ (None, #read_spec_tokens) },
+                };
+
                 field_idents.push(field_ident);
-                read_specs.push(tokens.read_spec_tokens);
+                read_specs.push(read_spec);
                 bin_read_fields.push(tokens.bin_read_tokens);
                 text_read_fields.push(tokens.text_read_tokens);
                 (field_idents, read_specs, bin_read_fields, text_read_fields)
@@ -199,8 +221,11 @@ fn derive_unnamed_fields(struct_name: &Ident, fields: &FieldsUnnamed) -> SynResu
         .fold(
             (vec![], vec![], vec![], vec![]),
             |(mut var_idents, mut read_specs, mut bin_read_fields, mut text_read_fields), (var_ident, tokens)| {
+                let read_spec_tokens = tokens.read_spec_tokens;
+                let pcd_name: Option<String> = None;
+
                 var_idents.push(var_ident);
-                read_specs.push(tokens.read_spec_tokens);
+                read_specs.push(quote!{ (#pcd_name, #read_spec_tokens) });
                 bin_read_fields.push(tokens.bin_read_tokens);
                 text_read_fields.push(tokens.text_read_tokens);
                 (var_idents, read_specs, bin_read_fields, text_read_fields)
@@ -244,7 +269,7 @@ fn derive_array_field(var_ident: &Ident, array: &TypeArray) -> Option<DerivedTok
         text_read_tokens: text_read,
     } = make_rw_expr(type_ident)?;
 
-    let read_spec_tokens = quote! { (#read_spec, Some(#len)) };
+    let read_spec_tokens = quote! { #read_spec, Some(#len) };
     let bin_read_tokens = quote! {
         let mut #var_ident = [Default::default(); #len];
 
@@ -337,7 +362,7 @@ fn derive_primitive_field(var_ident: &Ident, type_ident: &Ident) -> Option<Deriv
         text_read_tokens: text_read,
     } = make_rw_expr(type_ident)?;
 
-    let read_spec_tokens = quote! { (#read_spec, Some(1)) };
+    let read_spec_tokens = quote! { #read_spec, Some(1) };
     let bin_read_tokens = quote! {
         let #var_ident = { #bin_read };
     };
@@ -368,7 +393,7 @@ fn derive_vec_field(
         text_read_tokens: text_read,
     } = make_rw_expr(arg_ident)?;
 
-    let read_spec_tokens = quote! { (#read_spec, None) };
+    let read_spec_tokens = quote! { #read_spec, None };
     let bin_read_tokens = quote! {
         let #var_ident = {
             let count = field_defs[#field_index].count as usize;
@@ -457,4 +482,75 @@ fn make_rw_expr(type_ident: &Ident) -> Option<DerivedTokens> {
     };
 
     Some(derived_tokens)
+}
+
+fn parse_field_attributes(attrs: &[Attribute]) -> SynResult<(Option<String>, bool)> {
+    let name_regex = Regex::new(r"^[[:word:]]+$").unwrap();
+
+    let (rename_opt, ignore_name) = attrs
+        .iter()
+        .filter_map(|attr| {
+            let attr_ident = attr.path.get_ident()?;
+            Some((attr, attr_ident))
+        } )
+        .fold(
+            Ok((None, false)),
+            |result, (attr, attr_ident)| -> SynResult<_> {
+                let (name_opt, is_ignored) = result?;
+
+                let attr_ident_name = attr_ident.to_string();
+                match attr_ident_name.as_str() {
+                    "pcd_rename" => {
+                        if let Some(_) = name_opt {
+                            let error = SynError::new(attr.span(), "\"pcd_rename\" cannot be specified more than once.");
+                            return Err(error.into());
+                        }
+
+                        if is_ignored {
+                            let error = SynError::new(attr.span(), "\"pcd_rename\" and \"pcd_ignore_name\" attributes cannot appear simultaneously.");
+                            return Err(error.into());
+                        }
+
+                        let format_error = SynError::new(attr.span(), "The attribute must be in form of #[pcd_rename(\"...\")].");
+                        let name = match attr.parse_meta()? {
+                            Meta::List(meta_list) => {
+                                if meta_list.nested.len() != 1 {
+                                    return Err(format_error.into());
+                                }
+
+                                let nested = &meta_list.nested[0];
+
+                                if let NestedMeta::Lit(Lit::Str(litstr)) = nested {
+                                    let name = litstr.value();
+                                    let error = SynError::new(litstr.span(), "The name argument must be composed of word characters.");
+                                    name_regex.find(&name).ok_or(error)?;
+                                    name
+                                } else {
+                                    return Err(format_error.into());
+                                }
+                            }
+                            _ => return Err(format_error.into()),
+                        };
+
+                        Ok((Some(name), false))
+                    }
+                    "pcd_ignore_name" => {
+                        if let Some(_) = name_opt {
+                            let error = SynError::new(attr.span(), "\"pcd_rename\" and pcd_\"ignore_name\" attributes cannot appear simultaneously.");
+                            return Err(error.into());
+                        }
+
+                        if is_ignored {
+                            let error = SynError::new(attr.span(), "\"pcd_ignore_name\" cannot be specified more than once.");
+                            return Err(error.into());
+                        }
+
+                        Ok((None, true))
+                    }
+                    _ => Ok((name_opt, is_ignored)),
+                }
+            }
+        )?;
+
+    Ok((rename_opt, ignore_name))
 }

@@ -31,15 +31,15 @@ use std::io::prelude::*;
 // in binary mode, it is a sequence of binary integers or floating numbers.
 
 pub trait PCDRecordRead: Sized {
-    fn read_spec() -> Vec<(ValueKind, Option<usize>)>;
+    fn read_spec() -> Vec<(Option<String>, ValueKind, Option<usize>)>;
     fn read_chunk<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Fallible<Self>;
     fn read_line<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Fallible<Self>;
 }
 
 pub trait PCDRecordWrite: Sized {
-    fn write_spec() -> Vec<(ValueKind, usize)>;
-    fn write_chunk<R: Write>(&self, writer: &mut R, field_names: &[String]) -> Fallible<()>;
-    fn write_line<R: Write>(&self, writer: &mut R, field_names: &[String]) -> Fallible<()>;
+    fn write_spec() -> Vec<(String, ValueKind, usize)>;
+    fn write_chunk<R: Write>(&self, writer: &mut R) -> Fallible<()>;
+    fn write_line<R: Write>(&self, writer: &mut R) -> Fallible<()>;
 }
 
 // impl PCDRecord for u8 {

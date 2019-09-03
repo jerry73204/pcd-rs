@@ -1,8 +1,9 @@
 use proc_macro2::TokenStream;
 use quote::quote;
+use regex::Regex;
 use syn::{
-    spanned::Spanned, Data, DeriveInput, Error as SynError, Fields, FieldsNamed, FieldsUnnamed,
-    Ident, Result as SynResult, Type, TypeArray, TypePath,
+    spanned::Spanned, Attribute, Data, DeriveInput, Error as SynError, Fields, FieldsNamed, Ident,
+    Lit, Meta, NestedMeta, Result as SynResult, Type, TypeArray, TypePath,
 };
 
 struct DerivedTokens {
@@ -43,7 +44,12 @@ pub fn f_pcd_record_write_derive(input: DeriveInput) -> SynResult<TokenStream> {
         text_write_tokens,
     } = match &data.fields {
         Fields::Named(fields) => derive_named_fields(struct_name, &fields)?,
-        Fields::Unnamed(fields) => derive_unnamed_fields(struct_name, &fields)?,
+        Fields::Unnamed(_) => {
+            return Err(SynError::new(
+                input.span(),
+                "Canont derive PCDRecordWrite for tuple struct",
+            ))
+        }
         Fields::Unit => {
             return Err(SynError::new(
                 input.span(),
@@ -54,17 +60,17 @@ pub fn f_pcd_record_write_derive(input: DeriveInput) -> SynResult<TokenStream> {
 
     let expanded = quote! {
         impl pcd_rs::PCDRecordWrite for #struct_name {
-            fn write_spec() -> Vec<(pcd_rs::ValueKind, usize)> {
+            fn write_spec() -> Vec<(String, pcd_rs::ValueKind, usize)> {
                 #write_spec_tokens
             }
 
-            fn write_chunk<R: std::io::Write>(&self, writer: &mut R, field_names: &[String]) -> pcd_rs::failure::Fallible<()> {
+            fn write_chunk<R: std::io::Write>(&self, writer: &mut R) -> pcd_rs::failure::Fallible<()> {
                 use pcd_rs::byteorder::{LittleEndian, WriteBytesExt};
                 { #bin_write_tokens };
                 Ok(())
             }
 
-            fn write_line<R: std::io::Write>(&self, writer: &mut R, field_names: &[String]) -> pcd_rs::failure::Fallible<()> {
+            fn write_line<R: std::io::Write>(&self, writer: &mut R) -> pcd_rs::failure::Fallible<()> {
                 let mut tokens = Vec::<String>::new();
                 { #text_write_tokens };
                 let line = tokens.join(" ");
@@ -88,6 +94,14 @@ fn derive_named_fields(struct_name: &Ident, fields: &FieldsNamed) -> SynResult<D
                 "Type of struct field must be a primitive type or array of primitive type.",
             );
             let field_ident = format_ident!("{}", &field.ident.as_ref().unwrap());
+
+            let rename_opt = parse_field_attributes(&field.attrs)?;
+            let pcd_name = if let Some(name) = rename_opt {
+                name
+            } else {
+                field_ident.to_string()
+            };
+
             let tokens = match &field.ty {
                 Type::Array(array) => derive_array_field(&field_ident, array).ok_or(field_error)?,
                 Type::Path(path) => {
@@ -96,16 +110,17 @@ fn derive_named_fields(struct_name: &Ident, fields: &FieldsNamed) -> SynResult<D
                 _ => return Err(field_error),
             };
 
-            Ok((field_ident, tokens))
+            Ok((field_ident, pcd_name, tokens))
         })
         .collect::<SynResult<Vec<_>>>()?
         .into_iter()
         .fold(
             (vec![], vec![], vec![], vec![]),
             |(mut field_idents, mut write_specs, mut bin_write_fields, mut text_write_fields),
-             (field_ident, tokens)| {
+             (field_ident, pcd_name, tokens)| {
+                let write_spec_tokens = tokens.write_spec_tokens;
                 field_idents.push(field_ident);
-                write_specs.push(tokens.write_spec_tokens);
+                write_specs.push(quote! { (#pcd_name.to_owned(), #write_spec_tokens) });
                 bin_write_fields.push(tokens.bin_write_tokens);
                 text_write_fields.push(tokens.text_write_tokens);
                 (
@@ -117,78 +132,13 @@ fn derive_named_fields(struct_name: &Ident, fields: &FieldsNamed) -> SynResult<D
             },
         );
 
+    let write_spec_tokens = quote! { vec![#(#write_specs),*] };
     let bin_write_tokens = quote! {
         let #struct_name { #(#field_idents),* } = self;
         #(#bin_write_fields)*
     };
     let text_write_tokens = quote! {
         let #struct_name { #(#field_idents),* } = self;
-        #(#text_write_fields)*
-    };
-
-    let write_spec_tokens = quote! { vec![#(#write_specs),*] };
-    let derived_tokens = DerivedTokens {
-        write_spec_tokens,
-        bin_write_tokens,
-        text_write_tokens,
-    };
-    Ok(derived_tokens)
-}
-
-fn derive_unnamed_fields(struct_name: &Ident, fields: &FieldsUnnamed) -> SynResult<DerivedTokens> {
-    let (
-        var_idents,
-        write_specs,
-        bin_write_fields,
-        text_write_fields
-    ) = fields
-        .unnamed
-        .iter()
-        .enumerate()
-        .map(|(field_index, field)| {
-            let field_error = SynError::new(
-                field.span(),
-                "Type of struct field must be a primitive type, array of primitive type, or Vec<_> of primitive type",
-            );
-
-            let var_ident = format_ident!("_{}", field_index);
-
-            let tokens = match &field.ty {
-                Type::Array(array) => {
-                    derive_array_field(&var_ident, array)
-                        .ok_or(field_error)?
-                }
-                Type::Path(path) => {
-                    derive_path_field(field_index, &var_ident, path)
-                        .ok_or(field_error)?
-                }
-                _ => {
-                    return Err(field_error)
-                }
-            };
-
-            Ok((var_ident, tokens))
-        })
-        .collect::<SynResult<Vec<_>>>()?
-        .into_iter()
-        .fold(
-            (vec![], vec![], vec![], vec![]),
-            |(mut var_idents, mut write_specs, mut bin_write_fields, mut text_write_fields), (var_ident, tokens)| {
-                var_idents.push(var_ident);
-                write_specs.push(tokens.write_spec_tokens);
-                bin_write_fields.push(tokens.bin_write_tokens);
-                text_write_fields.push(tokens.text_write_tokens);
-                (var_idents, write_specs, bin_write_fields, text_write_fields)
-            }
-        );
-
-    let write_spec_tokens = quote! { vec![#(#write_specs),*] };
-    let bin_write_tokens = quote! {
-        let #struct_name ( #(#var_idents),* ) = self;
-        #(#bin_write_fields)*
-    };
-    let text_write_tokens = quote! {
-        let #struct_name ( #(#var_idents),* ) = self;
         #(#text_write_fields)*
     };
 
@@ -213,7 +163,7 @@ fn derive_array_field(var_ident: &Ident, array: &TypeArray) -> Option<DerivedTok
         text_write_tokens: text_write,
     } = make_rw_expr(type_ident)?;
 
-    let write_spec_tokens = quote! { (#write_spec, #len) };
+    let write_spec_tokens = quote! { #write_spec, #len };
     let bin_write_tokens = quote! {
         for value_ref in #var_ident.iter() {
             let value = *value_ref;
@@ -237,7 +187,7 @@ fn derive_array_field(var_ident: &Ident, array: &TypeArray) -> Option<DerivedTok
 }
 
 fn derive_path_field(
-    field_index: usize,
+    _field_index: usize,
     var_ident: &Ident,
     path: &TypePath,
 ) -> Option<DerivedTokens> {
@@ -252,7 +202,7 @@ fn derive_primitive_field(var_ident: &Ident, type_ident: &Ident) -> Option<Deriv
         text_write_tokens: text_write,
     } = make_rw_expr(type_ident)?;
 
-    let write_spec_tokens = quote! { (#write_spec, 1) };
+    let write_spec_tokens = quote! { #write_spec, 1 };
     let bin_write_tokens = quote! {
         {
             let value = *#var_ident;
@@ -328,4 +278,63 @@ fn make_rw_expr(type_ident: &Ident) -> Option<DerivedTokens> {
     };
 
     Some(derived_tokens)
+}
+
+fn parse_field_attributes(attrs: &[Attribute]) -> SynResult<Option<String>> {
+    let name_regex = Regex::new(r"^[[:word:]]+$").unwrap();
+
+    let rename_opt = attrs
+        .iter()
+        .filter_map(|attr| {
+            let attr_ident = attr.path.get_ident()?;
+            Some((attr, attr_ident))
+        })
+        .fold(Ok(None), |result, (attr, attr_ident)| -> SynResult<_> {
+            let name_opt = result?;
+            let attr_ident_name = attr_ident.to_string();
+
+            match attr_ident_name.as_str() {
+                "pcd_rename" => {
+                    if let Some(_) = name_opt {
+                        let error = SynError::new(
+                            attr.span(),
+                            "\"pcd_rename\" cannot be specified more than once.",
+                        );
+                        return Err(error.into());
+                    }
+
+                    let format_error = SynError::new(
+                        attr.span(),
+                        "The attribute must be in form of #[pcd_rename(\"...\")].",
+                    );
+                    let name = match attr.parse_meta()? {
+                        Meta::List(meta_list) => {
+                            if meta_list.nested.len() != 1 {
+                                return Err(format_error.into());
+                            }
+
+                            let nested = &meta_list.nested[0];
+
+                            if let NestedMeta::Lit(Lit::Str(litstr)) = nested {
+                                let name = litstr.value();
+                                let error = SynError::new(
+                                    litstr.span(),
+                                    "The name argument must be composed of word characters.",
+                                );
+                                name_regex.find(&name).ok_or(error)?;
+                                name
+                            } else {
+                                return Err(format_error.into());
+                            }
+                        }
+                        _ => return Err(format_error.into()),
+                    };
+
+                    Ok(Some(name))
+                }
+                _ => Ok(name_opt),
+            }
+        })?;
+
+    Ok(rename_opt)
 }

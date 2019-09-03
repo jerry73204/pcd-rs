@@ -67,21 +67,28 @@ impl SeqReaderBuilder {
         let meta = crate::utils::load_meta(&mut reader, &mut line_count)?;
 
         let record_spec = T::read_spec();
-        let mismatch_error = PCDError::new_schema_mismatch_error(&record_spec, &meta.field_defs);
+        let mismatch_error =
+            PCDError::new_schema_mismatch_error(record_spec.as_slice(), &meta.field_defs);
         if record_spec.len() != meta.field_defs.len() {
             return Err(mismatch_error.into());
         }
 
         for (record_field, meta_field) in record_spec.into_iter().zip(meta.field_defs.iter()) {
-            let (record_kind, record_count_opt) = record_field;
+            let (name_opt, record_kind, record_count_opt) = record_field;
             let FieldDef {
-                name: _,
+                name: meta_name,
                 kind: meta_kind,
                 count: meta_count,
             } = meta_field;
 
             if record_kind != *meta_kind {
                 return Err(mismatch_error.into());
+            }
+
+            if let Some(name) = &name_opt {
+                if name != meta_name {
+                    return Err(mismatch_error.into());
+                }
             }
 
             if let Some(record_count) = record_count_opt {
@@ -118,7 +125,7 @@ impl SeqReaderBuilder {
     }
 
     /// Load PCD data given by file path
-    pub fn open_path<P: AsRef<Path>, T: PCDRecordRead>(
+    pub fn open<P: AsRef<Path>, T: PCDRecordRead>(
         path: P,
     ) -> Fallible<SeqReader<BufReader<File>, T>> {
         let file = File::open(path.as_ref())?;
