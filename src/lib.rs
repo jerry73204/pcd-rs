@@ -31,17 +31,18 @@ pub extern crate byteorder;
 #[macro_use]
 pub extern crate failure;
 extern crate pcd_rs_derive;
+extern crate regex;
 
 pub mod error;
 mod record;
 mod seq_reader;
 mod utils;
+mod writer;
 
-#[doc(hidden)]
 pub use pcd_rs_derive::*;
-pub use record::PCDRecord;
+pub use record::{PCDRecordRead, PCDRecordWrite};
 pub use seq_reader::{SeqReader, SeqReaderBuilder};
-#[doc(hidden)]
+pub use writer::{SeqWriter, SeqWriterBuilder};
 
 /// The struct keep meta data of PCD file.
 #[derive(Debug)]
@@ -49,10 +50,36 @@ pub struct PCDMeta {
     pub version: String,
     pub width: u64,
     pub height: u64,
-    pub viewpoint: Vec<u64>,
-    pub num_records: u64,
+    pub viewpoint: ViewPoint,
+    pub num_points: u64,
     pub data: DataKind,
     pub field_defs: Vec<FieldDef>,
+}
+
+/// Represents VIEWPOINT field in meta data.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ViewPoint {
+    pub tx: f64,
+    pub ty: f64,
+    pub tz: f64,
+    pub qw: f64,
+    pub qx: f64,
+    pub qy: f64,
+    pub qz: f64,
+}
+
+impl Default for ViewPoint {
+    fn default() -> Self {
+        ViewPoint {
+            tx: 0.0,
+            ty: 0.0,
+            tz: 0.0,
+            qw: 1.0,
+            qx: 0.0,
+            qy: 0.0,
+            qz: 0.0,
+        }
+    }
 }
 
 /// The enum specifies one of signed, unsigned integers, and floating point number type to the field.

@@ -1,4 +1,4 @@
-use crate::{error::PCDError, DataKind, FieldDef, PCDMeta, TypeKind, ValueKind};
+use crate::{error::PCDError, DataKind, FieldDef, PCDMeta, TypeKind, ValueKind, ViewPoint};
 use failure::Fallible;
 use std::{collections::HashSet, io::prelude::*};
 
@@ -180,19 +180,30 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Fallible
     let meta_viewpoint = {
         let tokens = get_meta_line("VIEWPOINT")?;
 
-        if tokens.len() == 1 {
+        if tokens.len() != 8 {
             return Err(
                 PCDError::new_parse_error(*line_count, "VIEWPOINT line is not understood").into(),
             );
         }
 
-        let mut params = vec![];
-        for tk in tokens[1..].into_iter() {
-            let param: u64 = tk.parse()?;
-            params.push(param);
-        }
+        let tx = tokens[1].parse()?;
+        let ty = tokens[2].parse()?;
+        let tz = tokens[3].parse()?;
+        let qw = tokens[4].parse()?;
+        let qx = tokens[5].parse()?;
+        let qy = tokens[6].parse()?;
+        let qz = tokens[7].parse()?;
+        let viewpoint = ViewPoint {
+            tx,
+            ty,
+            tz,
+            qw,
+            qx,
+            qy,
+            qz,
+        };
 
-        params
+        viewpoint
     };
 
     let meta_points = {
@@ -296,7 +307,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Fallible
         width: meta_width,
         height: meta_height,
         viewpoint: meta_viewpoint,
-        num_records: meta_points,
+        num_points: meta_points,
         data: meta_data,
     };
 

@@ -1,4 +1,4 @@
-use crate::{error::PCDError, DataKind, FieldDef, PCDMeta, PCDRecord};
+use crate::{error::PCDError, DataKind, FieldDef, PCDMeta, PCDRecordRead};
 use failure::Fallible;
 use std::{
     fs::File,
@@ -7,7 +7,7 @@ use std::{
     path::Path,
 };
 
-pub struct SeqReader<R: BufRead, T: PCDRecord> {
+pub struct SeqReader<R: BufRead, T: PCDRecordRead> {
     meta: PCDMeta,
     record_count: usize,
     finished: bool,
@@ -15,14 +15,14 @@ pub struct SeqReader<R: BufRead, T: PCDRecord> {
     _phantom: PhantomData<T>,
 }
 
-impl<R: BufRead, T: PCDRecord> SeqReader<R, T> {
-    /// Get meta data
+impl<R: BufRead, T: PCDRecordRead> SeqReader<R, T> {
+    /// Get meta data.
     pub fn meta(&self) -> &PCDMeta {
         &self.meta
     }
 }
 
-impl<R: BufRead, T: PCDRecord> Iterator for SeqReader<R, T> {
+impl<R: BufRead, T: PCDRecordRead> Iterator for SeqReader<R, T> {
     type Item = Fallible<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -38,7 +38,7 @@ impl<R: BufRead, T: PCDRecord> Iterator for SeqReader<R, T> {
         match record_result {
             Ok(_) => {
                 self.record_count += 1;
-                if self.record_count == self.meta.num_records as usize {
+                if self.record_count == self.meta.num_points as usize {
                     self.finished = true;
                 }
             }
@@ -51,7 +51,7 @@ impl<R: BufRead, T: PCDRecord> Iterator for SeqReader<R, T> {
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let size = self.meta.num_records as usize;
+        let size = self.meta.num_points as usize;
         (size, Some(size))
     }
 }
@@ -59,12 +59,14 @@ impl<R: BufRead, T: PCDRecord> Iterator for SeqReader<R, T> {
 pub struct SeqReaderBuilder;
 
 impl SeqReaderBuilder {
-    /// Load PCD data from a reader implementing [BufRead](std::io::BufRead) trait
-    pub fn from_buf_reader<R: BufRead, T: PCDRecord>(mut reader: R) -> Fallible<SeqReader<R, T>> {
+    /// Load PCD data from a reader implementing [BufRead](std::io::BufRead) trait.
+    pub fn from_buf_reader<R: BufRead, T: PCDRecordRead>(
+        mut reader: R,
+    ) -> Fallible<SeqReader<R, T>> {
         let mut line_count = 0;
         let meta = crate::utils::load_meta(&mut reader, &mut line_count)?;
 
-        let record_spec = T::record_spec();
+        let record_spec = T::read_spec();
         let mismatch_error = PCDError::new_schema_mismatch_error(&record_spec, &meta.field_defs);
         if record_spec.len() != meta.field_defs.len() {
             return Err(mismatch_error.into());
@@ -101,14 +103,14 @@ impl SeqReaderBuilder {
     }
 
     /// Load PCD data from a reader
-    pub fn from_reader<Rd: Read, T: PCDRecord>(
+    pub fn from_reader<Rd: Read, T: PCDRecordRead>(
         reader: Rd,
     ) -> Fallible<SeqReader<BufReader<Rd>, T>> {
         SeqReaderBuilder::from_buf_reader(BufReader::new(reader))
     }
 
     /// Parse PCD data buffer
-    pub fn from_buffer<T: PCDRecord>(
+    pub fn from_buffer<T: PCDRecordRead>(
         buf: &[u8],
     ) -> Fallible<SeqReader<BufReader<Cursor<&[u8]>>, T>> {
         let reader = Cursor::new(buf);
@@ -116,7 +118,7 @@ impl SeqReaderBuilder {
     }
 
     /// Load PCD data given by file path
-    pub fn open_path<P: AsRef<Path>, T: PCDRecord>(
+    pub fn open_path<P: AsRef<Path>, T: PCDRecordRead>(
         path: P,
     ) -> Fallible<SeqReader<BufReader<File>, T>> {
         let file = File::open(path.as_ref())?;

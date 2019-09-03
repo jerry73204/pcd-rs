@@ -27,6 +27,8 @@ pub enum PCDError {
         expect, found
     )]
     TextTokenMismatchError { expect: usize, found: usize },
+    #[fail(display = "Invalid argument: {}", desc)]
+    InvalidArgumentError { desc: String },
 }
 
 impl PCDError {
@@ -63,5 +65,11 @@ impl PCDError {
 
     pub fn new_text_token_mismatch_error(expect: usize, found: usize) -> PCDError {
         PCDError::TextTokenMismatchError { expect, found }
+    }
+
+    pub fn new_invalid_argument_error(desc: &str) -> PCDError {
+        PCDError::InvalidArgumentError {
+            desc: desc.to_owned(),
+        }
     }
 }

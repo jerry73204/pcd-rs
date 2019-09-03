@@ -1,8 +1,8 @@
 use failure::Fallible;
-use pcd_rs::{PCDRecord, SeqReaderBuilder};
+use pcd_rs::{PCDRecordRead, SeqReaderBuilder};
 use std::path::Path;
 
-#[derive(PCDRecord)]
+#[derive(PCDRecordRead)]
 pub struct PointAscii {
     x: f32,
     y: f32,
@@ -10,12 +10,19 @@ pub struct PointAscii {
     w: f32,
 }
 
-#[derive(PCDRecord)]
+#[derive(PCDRecordRead)]
 pub struct PointBinary {
     x: f32,
     y: f32,
     z: f32,
     timestamp: u32,
+}
+
+#[derive(PCDRecordRead)]
+pub struct XXX {
+    x: f32,
+    y: [u8; 4],
+    z: Vec<f64>,
 }
 
 #[test]
