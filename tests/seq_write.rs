@@ -1,6 +1,5 @@
 use failure::Fallible;
 use pcd_rs::{DataKind, PCDRecordRead, PCDRecordWrite, SeqReaderBuilder, SeqWriterBuilder};
-use std::path::Path;
 
 #[derive(Debug, PCDRecordRead, PCDRecordWrite, PartialEq)]
 pub struct Point {

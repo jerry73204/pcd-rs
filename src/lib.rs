@@ -6,19 +6,19 @@
 //!
 //! ```rust
 //! use failure::Fallible;
-//! use pcd_rs::{SeqReaderBuilder, PCDRecord};
+//! use pcd_rs::{SeqReaderBuilder, PCDRecordRead};
 //! use std::path::Path;
 //!
-//! #[derive(PCDRecord)]
+//! #[derive(PCDRecordRead)]
 //! pub struct Point {
 //!     x: f32,
 //!     y: f32,
 //!     z: f32,
-//!     w: f32,
+//!     rgb: f32,
 //! }
 //!
 //! fn main() -> Fallible<()> {
-//!     let reader = SeqReaderBuilder::open_path("test_files/ascii.pcd")?;
+//!     let reader = SeqReaderBuilder::open("test_files/ascii.pcd")?;
 //!     let points = reader.collect::<Fallible<Vec<Point>>>()?;
 //!     assert_eq!(points.len(), 213);
 //!     Ok(())

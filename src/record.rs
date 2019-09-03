@@ -1,25 +1,25 @@
-//! The module defines [PCDRecord](crate::PCDRecord) trait, which is
-//! analogous to a _point_ in PCD data.
-//! Any object scanned by readers and written by writers should implement
-//! this trait.
-//!
-//! To implement PCDRecord on a struct, it's as simple as using derive macro:
-//! ```rust
-//! use pcd_rs::PCDRecord;
-//!
-//! #[derive(PCDRecord)]
-//! pub struct TimestampedPoint {
-//!     x: f32,
-//!     y: f32,
-//!     z: f32,
-//!     timestamp: u32,
-//! }
-//! ```
-//!
-//! The implementation can be derived if:
-//! - The struct is either a normal struct or tuple struct. Unit struct is not allowed.
-//! - Each field type is primitive, array of primitive type, or Vec of primitive type.
-//! - Supported primitive types are u8, u16, u32, i8, i16, i32, f32, f64.
+// The module defines [PCDRecord](crate::PCDRecord) trait, which is
+// analogous to a _point_ in PCD data.
+// Any object scanned by readers and written by writers should implement
+// this trait.
+//
+// To implement PCDRecord on a struct, it's as simple as using derive macro:
+// ```rust
+// use pcd_rs::PCDRecord;
+//
+// #[derive(PCDRecord)]
+// pub struct TimestampedPoint {
+//     x: f32,
+//     y: f32,
+//     z: f32,
+//     timestamp: u32,
+// }
+// ```
+//
+// The implementation can be derived if:
+// - The struct is either a normal struct or tuple struct. Unit struct is not allowed.
+// - Each field type is primitive, array of primitive type, or Vec of primitive type.
+// - Supported primitive types are u8, u16, u32, i8, i16, i32, f32, f64.
 
 use crate::{FieldDef, ValueKind};
 use failure::Fallible;
