@@ -30,21 +30,18 @@ fn dump_ascii() -> Fallible<()> {
         },
     ];
 
-    {
-        let mut writer =
-            SeqWriterBuilder::<Point>::new(300, 1, Default::default(), DataKind::ASCII)?
-                .create(path)?;
+    let mut writer = SeqWriterBuilder::<Point>::new(300, 1, Default::default(), DataKind::ASCII)?
+        .create(path)?;
 
-        for point in dump_points.iter() {
-            writer.push(&point)?;
-        }
+    for point in dump_points.iter() {
+        writer.push(&point)?;
     }
 
-    {
-        let reader = SeqReaderBuilder::open(path)?;
-        let load_points = reader.collect::<Fallible<Vec<Point>>>()?;
-        assert_eq!(dump_points, load_points);
-    }
+    let reader = SeqReaderBuilder::open(path)?;
+    let load_points = reader.collect::<Fallible<Vec<Point>>>()?;
+
+    assert_eq!(dump_points, load_points);
+    std::fs::remove_file(path)?;
 
     Ok(())
 }
@@ -71,21 +68,18 @@ fn dump_binary() -> Fallible<()> {
         },
     ];
 
-    {
-        let mut writer =
-            SeqWriterBuilder::<Point>::new(300, 1, Default::default(), DataKind::Binary)?
-                .create(path)?;
+    let mut writer = SeqWriterBuilder::<Point>::new(300, 1, Default::default(), DataKind::Binary)?
+        .create(path)?;
 
-        for point in dump_points.iter() {
-            writer.push(&point)?;
-        }
+    for point in dump_points.iter() {
+        writer.push(&point)?;
     }
 
-    {
-        let reader = SeqReaderBuilder::open(path)?;
-        let load_points = reader.collect::<Fallible<Vec<Point>>>()?;
-        assert_eq!(dump_points, load_points);
-    }
+    let reader = SeqReaderBuilder::open(path)?;
+    let load_points = reader.collect::<Fallible<Vec<Point>>>()?;
+
+    assert_eq!(dump_points, load_points);
+    std::fs::remove_file(path)?;
 
     Ok(())
 }
