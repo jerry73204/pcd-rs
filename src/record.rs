@@ -22,6 +22,7 @@
 // - Supported primitive types are u8, u16, u32, i8, i16, i32, f32, f64.
 
 use crate::{FieldDef, ValueKind};
+use byteorder::{LittleEndian, ReadBytesExt};
 use failure::Fallible;
 use std::io::prelude::*;
 
@@ -42,251 +43,104 @@ pub trait PCDRecordWrite: Sized {
     fn write_line<R: Write>(&self, writer: &mut R) -> Fallible<()>;
 }
 
-// impl PCDRecord for u8 {
-//     fn record_spec() -> Vec<(ValueKind, Option<usize>)> {
-//         vec![(ValueKind::U8, Some(1))]
-//     }
+impl PCDRecordRead for u8 {
+    fn read_spec() -> Vec<(Option<String>, ValueKind, Option<usize>)> {
+        vec![(None, ValueKind::U8, Some(1))]
+    }
 
-//     fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
-//         let value = reader.read_u8()?;
-//         Ok(value)
-//     }
+    fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
+        let value = reader.read_u8()?;
+        Ok(value)
+    }
 
-//     fn write_chunk<R: Write>(&self, writer: &mut R, _field_defs: &[FieldDef]) -> Fallible<()> {
-//         writer.write_u8(*self)?;
-//         Ok(())
-//     }
+    fn read_line<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
+        let mut line = String::new();
+        reader.read_line(&mut line)?;
+        Ok(line.parse()?)
+    }
+}
 
-//     fn read_line<R: BufRead>(reader: &mut R) -> Fallible<Self> {
-//         let mut line = String::new();
-//         reader.read_line(&mut line)?;
-//         Ok(line.parse()?)
-//     }
+impl PCDRecordRead for i8 {
+    fn read_spec() -> Vec<(Option<String>, ValueKind, Option<usize>)> {
+        vec![(None, ValueKind::I8, Some(1))]
+    }
 
-//     fn write_line<R: Write>(&self, writer: &mut R) -> Fallible<()> {
-//         writeln!(writer, "{}", self)?;
-//         Ok(())
-//     }
-// }
+    fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
+        let value = reader.read_i8()?;
+        Ok(value)
+    }
 
-// impl PCDRecord for u16 {
-//     fn record_spec() -> Vec<(ValueKind, Option<usize>)> {
-//         vec![(ValueKind::U16, Some(1))]
-//     }
+    fn read_line<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
+        let mut line = String::new();
+        reader.read_line(&mut line)?;
+        Ok(line.parse()?)
+    }
+}
 
-//     fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
-//         let value = reader.read_u16::<LittleEndian>()?;
-//         Ok(value)
-//     }
+macro_rules! impl_primitive {
+    ($ty:ty, $kind:ident, $read:ident) => {
+        impl PCDRecordRead for $ty {
+            fn read_spec() -> Vec<(Option<String>, ValueKind, Option<usize>)> {
+                vec![(None, ValueKind::$kind, Some(1))]
+            }
 
-//     fn write_chunk<R: Write>(&self, writer: &mut R, _field_defs: &[FieldDef]) -> Fallible<()> {
-//         writer.write_u16::<LittleEndian>(*self)?;
-//         Ok(())
-//     }
+            fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
+                let value = reader.$read::<LittleEndian>()?;
+                Ok(value)
+            }
 
-//     fn read_line<R: BufRead>(reader: &mut R) -> Fallible<Self> {
-//         let mut line = String::new();
-//         reader.read_line(&mut line)?;
-//         Ok(line.parse()?)
-//     }
+            fn read_line<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
+                let mut line = String::new();
+                reader.read_line(&mut line)?;
+                Ok(line.parse()?)
+            }
+        }
+    };
+}
 
-//     fn write_line<R: Write>(&self, writer: &mut R) -> Fallible<()> {
-//         writeln!(writer, "{}", self)?;
-//         Ok(())
-//     }
-// }
+impl_primitive!(u16, U16, read_u16);
+impl_primitive!(u32, U32, read_u32);
+impl_primitive!(i16, I16, read_i16);
+impl_primitive!(i32, I32, read_i32);
+impl_primitive!(f32, F32, read_f32);
+impl_primitive!(f64, F64, read_f64);
 
-// impl PCDRecord for u32 {
-//     fn record_spec() -> Vec<(ValueKind, Option<usize>)> {
-//         vec![(ValueKind::U32, Some(1))]
-//     }
+// TODO: Implement PCDrecordRead for array types using cons generics
+// macro_rules! impl_array {
+//     ($ty:ty, $kind:ident, $read:ident) => {
+//         impl<const N: usize> PCDRecordRead for [$ty; N] {
+//             fn read_spec() -> Vec<(Option<String>, ValueKind, Option<usize>)> {
+//                 vec![(None, ValueKind::$kind, Some(N))]
+//             }
 
-//     fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
-//         let value = reader.read_u32::<LittleEndian>()?;
-//         Ok(value)
-//     }
+//             fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
+//                 let mut array = [Default::default(); N];
+//                 for index in 0..N {
+//                     array[index] = reader.$read::<LittleEndian>()?;
+//                 }
+//                 Ok(array)
+//             }
 
-//     fn write_chunk<R: Write>(&self, writer: &mut R, _field_defs: &[FieldDef]) -> Fallible<()> {
-//         writer.write_u32::<LittleEndian>(*self)?;
-//         Ok(())
-//     }
+//             fn read_line<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
+//                 let mut line = String::new();
+//                 reader.read_line(&mut line)?;
+//                 let mut tokens = line.split_ascii_whitespace().into_iter();
 
-//     fn read_line<R: BufRead>(reader: &mut R) -> Fallible<Self> {
-//         let mut line = String::new();
-//         reader.read_line(&mut line)?;
-//         Ok(line.parse()?)
-//     }
+//                 let expect_len = N;
+//                 let (found_len, _) = tokens.size_hint();
+//                 if expect_len != found_len {
+//                     let error = PCDError::new_text_token_mismatch_error(expect_len, found_len);
+//                     return Err(error.into());
+//                 }
 
-//     fn write_line<R: Write>(&self, writer: &mut R) -> Fallible<()> {
-//         writeln!(writer, "{}", self)?;
-//         Ok(())
-//     }
-// }
-
-// impl PCDRecord for i8 {
-//     fn record_spec() -> Vec<(ValueKind, Option<usize>)> {
-//         vec![(ValueKind::I8, Some(1))]
-//     }
-
-//     fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
-//         let value = reader.read_i8()?;
-//         Ok(value)
-//     }
-
-//     fn write_chunk<R: Write>(&self, writer: &mut R, _field_defs: &[FieldDef]) -> Fallible<()> {
-//         writer.write_i8(*self)?;
-//         Ok(())
-//     }
-
-//     fn read_line<R: BufRead>(reader: &mut R) -> Fallible<Self> {
-//         let mut line = String::new();
-//         reader.read_line(&mut line)?;
-//         Ok(line.parse()?)
-//     }
-
-//     fn write_line<R: Write>(&self, writer: &mut R) -> Fallible<()> {
-//         writeln!(writer, "{}", self)?;
-//         Ok(())
-//     }
-// }
-
-// impl PCDRecord for i16 {
-//     fn record_spec() -> Vec<(ValueKind, Option<usize>)> {
-//         vec![(ValueKind::I16, Some(1))]
-//     }
-
-//     fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
-//         let value = reader.read_i16::<LittleEndian>()?;
-//         Ok(value)
-//     }
-
-//     fn write_chunk<R: Write>(&self, writer: &mut R, _field_defs: &[FieldDef]) -> Fallible<()> {
-//         writer.write_i16::<LittleEndian>(*self)?;
-//         Ok(())
-//     }
-
-//     fn read_line<R: BufRead>(reader: &mut R) -> Fallible<Self> {
-//         let mut line = String::new();
-//         reader.read_line(&mut line)?;
-//         Ok(line.parse()?)
-//     }
-
-//     fn write_line<R: Write>(&self, writer: &mut R) -> Fallible<()> {
-//         writeln!(writer, "{}", self)?;
-//         Ok(())
-//     }
-// }
-
-// impl PCDRecord for i32 {
-//     fn record_spec() -> Vec<(ValueKind, Option<usize>)> {
-//         vec![(ValueKind::I32, Some(1))]
-//     }
-
-//     fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
-//         let value = reader.read_i32::<LittleEndian>()?;
-//         Ok(value)
-//     }
-
-//     fn write_chunk<R: Write>(&self, writer: &mut R, _field_defs: &[FieldDef]) -> Fallible<()> {
-//         writer.write_i32::<LittleEndian>(*self)?;
-//         Ok(())
-//     }
-
-//     fn read_line<R: BufRead>(reader: &mut R) -> Fallible<Self> {
-//         let mut line = String::new();
-//         reader.read_line(&mut line)?;
-//         Ok(line.parse()?)
-//     }
-
-//     fn write_line<R: Write>(&self, writer: &mut R) -> Fallible<()> {
-//         writeln!(writer, "{}", self)?;
-//         Ok(())
-//     }
-// }
-
-// impl PCDRecord for f32 {
-//     fn record_spec() -> Vec<(ValueKind, Option<usize>)> {
-//         vec![(ValueKind::F32, Some(1))]
-//     }
-
-//     fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
-//         let value = reader.read_f32::<LittleEndian>()?;
-//         Ok(value)
-//     }
-
-//     fn write_chunk<R: Write>(&self, writer: &mut R, _field_defs: &[FieldDef]) -> Fallible<()> {
-//         writer.write_f32::<LittleEndian>(*self)?;
-//         Ok(())
-//     }
-
-//     fn read_line<R: BufRead>(reader: &mut R) -> Fallible<Self> {
-//         let mut line = String::new();
-//         reader.read_line(&mut line)?;
-//         Ok(line.parse()?)
-//     }
-
-//     fn write_line<R: Write>(&self, writer: &mut R) -> Fallible<()> {
-//         writeln!(writer, "{}", self)?;
-//         Ok(())
-//     }
-// }
-
-// impl PCDRecord for f64 {
-//     fn record_spec() -> Vec<(ValueKind, Option<usize>)> {
-//         vec![(ValueKind::F64, Some(1))]
-//     }
-
-//     fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
-//         let value = reader.read_f64::<LittleEndian>()?;
-//         Ok(value)
-//     }
-
-//     fn write_chunk<R: Write>(&self, writer: &mut R, _field_defs: &[FieldDef]) -> Fallible<()> {
-//         writer.write_f64::<LittleEndian>(*self)?;
-//         Ok(())
-//     }
-
-//     fn read_line<R: BufRead>(reader: &mut R) -> Fallible<Self> {
-//         let mut line = String::new();
-//         reader.read_line(&mut line)?;
-//         Ok(line.parse()?)
-//     }
-
-//     fn write_line<R: Write>(&self, writer: &mut R) -> Fallible<()> {
-//         writeln!(writer, "{}", self)?;
-//         Ok(())
-//     }
-// }
-
-// impl<const N: usize> PCDRecord for [u8; N] {
-//     fn record_spec() -> Vec<(ValueKind, Option<usize>)> {
-//         vec![(ValueKind::U8, Some(N))]
-//     }
-
-//     fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
-//         let mut array = [0; N];
-//         for index in 0..N {
-//             array[index] = reader.read_u8()?;
+//                 let mut array = [Default::default(); N];
+//                 for index in 0..N {
+//                     array[index] = tokens.next().unwrap().parse::<$ty>()?
+//                 }
+//                 Ok(array)
+//             }
 //         }
-//         Ok(array)
-//     }
-
-//     fn write_chunk<R: Write>(&self, writer: &mut R, _field_defs: &[FieldDef]) -> Fallible<()> {
-//         for value in self.iter() {
-//             writer.write_u8(*value)?;
-//         }
-//         Ok(())
-//     }
-
-//     fn read_line<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Fallible<Self> {
-//         let mut line = String::new();
-//         reader.read_line(&mut line)?;
-//         let tokens = line.split_ascii_whitespace().collect::<Vec<_>>();
-//         if tokens.len() != N {
-//             let error = PCDError::new_text_token_mismatch_error(N, );
-//         }
-//     }
-
-//     fn write_line<R: Write>(&self, writer: &mut R) -> Fallible<()> {
-//     }
+//     };
 // }
+
+// impl_array!(u16, U16, read_u16);
