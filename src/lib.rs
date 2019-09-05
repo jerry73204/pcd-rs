@@ -1,8 +1,12 @@
-//! PCD point cloud file parser for Rust.
+//! Read and write PCD file format.
 //!
-//! `pcd-rs` allows you to parse PCD point cloud data from a file,
-//! a path, or a binary buffer. The reader implements `Iterator` to
-//! let you iterate over points with ease.
+//! `pcd-rs` allows you to read or write PCD point cloud data from either
+//! a path or a binary buffer.
+//!
+//! [SeqReader](crate::SeqReader) lets you load points sequentially with
+//! [Iterator](std::iter::Iterator) interface. The points are stored in
+//! types implementing [PCDRecodRead](crate::PCDRecodRead) trait.
+//! You can build custom point type using `#[derive(PCDRecordRead)]` macro.
 //!
 //! ```rust
 //! use failure::Fallible;
