@@ -1,4 +1,39 @@
-use crate::{DataKind, PCDRecordWrite, ValueKind, ViewPoint};
+//! [SeqWriter](crate::seq_writer::SeqWriter) lets you write points sequentially to
+//! PCD file or writer given by user. The written point type must implement
+//! [PCDRecordWrite](crate::record::PCDRecordWrite) trait.
+//! See [record](crate::record) moduel doc to implement your own point type.
+//!
+//! ```rust
+//! use failure::Fallible;
+//! use pcd_rs::{DataKind, seq_writer::SeqWriterBuilder, PCDRecordWrite};
+//! use std::path::Path;
+//!
+//! #[derive(PCDRecordWrite)]
+//! pub struct Point {
+//!     x: f32,
+//!     y: f32,
+//!     z: f32,
+//! }
+//!
+//! fn main() -> Fallible<()> {
+//!     let viewpoint = Default::default();
+//!     let kind = DataKind::ASCII;
+//!     let mut writer = SeqWriterBuilder::<Point>::new(300, 1, viewpoint, kind)?
+//!         .create("test_files/dump.pcd")?;
+//!
+//!     let point = Point {
+//!         x: 3.14159,
+//!         y: 2.71828,
+//!         z: -5.0,
+//!     };
+//!
+//!     writer.push(&point)?;
+//!
+//!     Ok(())
+//! }
+//! ```
+
+use crate::{record::PCDRecordWrite, DataKind, ValueKind, ViewPoint};
 use failure::Fallible;
 use std::{
     fs::File,
@@ -7,6 +42,7 @@ use std::{
     path::Path,
 };
 
+/// A builder type that builds [SeqWriter](crate::seq_writer::SeqWriter).
 pub struct SeqWriterBuilder<T: PCDRecordWrite> {
     width: u64,
     height: u64,
@@ -17,6 +53,8 @@ pub struct SeqWriterBuilder<T: PCDRecordWrite> {
 }
 
 impl<T: PCDRecordWrite> SeqWriterBuilder<T> {
+    /// Create new [SeqWriterBuilder](crate::seq_writer::SeqWriterBuilder) that
+    /// stores header data.
     pub fn new(
         width: u64,
         height: u64,
@@ -37,11 +75,15 @@ impl<T: PCDRecordWrite> SeqWriterBuilder<T> {
         Ok(builder)
     }
 
+    /// Builds new [SeqWriter](crate::seq_writer::SeqWriter) object from a writer.
+    /// The writer must implement both [Write](std::io::Write) and [Write](std::io::Seek)
+    /// traits.
     pub fn from_writer<R: Write + Seek>(self, writer: R) -> Fallible<SeqWriter<R, T>> {
         let seq_writer = SeqWriter::new(self, writer)?;
         Ok(seq_writer)
     }
 
+    /// Builds new [SeqWriter](crate::seq_writer::SeqWriter) by creating a new file.
     pub fn create<P: AsRef<Path>>(self, path: P) -> Fallible<SeqWriter<BufWriter<File>, T>> {
         let writer = BufWriter::new(File::create(path.as_ref())?);
         let seq_writer = self.from_writer(writer)?;
@@ -49,6 +91,7 @@ impl<T: PCDRecordWrite> SeqWriterBuilder<T> {
     }
 }
 
+/// A Writer type that write points to PCD data.
 pub struct SeqWriter<R: Write + Seek, T: PCDRecordWrite> {
     writer: R,
     builder: SeqWriterBuilder<T>,
@@ -58,7 +101,7 @@ pub struct SeqWriter<R: Write + Seek, T: PCDRecordWrite> {
 }
 
 impl<R: Write + Seek, T: PCDRecordWrite> SeqWriter<R, T> {
-    pub fn new(builder: SeqWriterBuilder<T>, mut writer: R) -> Fallible<SeqWriter<R, T>> {
+    fn new(builder: SeqWriterBuilder<T>, mut writer: R) -> Fallible<SeqWriter<R, T>> {
         let (points_arg_begin, points_arg_width) = Self::write_meta(&builder, &mut writer)?;
         dbg!(points_arg_begin, points_arg_width);
         let seq_writer = SeqWriter {
@@ -71,7 +114,7 @@ impl<R: Write + Seek, T: PCDRecordWrite> SeqWriter<R, T> {
         Ok(seq_writer)
     }
 
-    pub fn write_meta(builder: &SeqWriterBuilder<T>, writer: &mut R) -> Fallible<(u64, usize)> {
+    fn write_meta(builder: &SeqWriterBuilder<T>, writer: &mut R) -> Fallible<(u64, usize)> {
         let fields_args = builder
             .record_spec
             .iter()
@@ -152,6 +195,7 @@ impl<R: Write + Seek, T: PCDRecordWrite> SeqWriter<R, T> {
         Ok((points_arg_begin, points_arg_width))
     }
 
+    /// Writes a new point to PCD data.
     pub fn push(&mut self, record: &T) -> Fallible<()> {
         match self.builder.data_kind {
             DataKind::Binary => record.write_chunk(&mut self.writer)?,

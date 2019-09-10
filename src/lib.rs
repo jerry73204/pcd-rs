@@ -3,33 +3,9 @@
 //! `pcd-rs` allows you to read or write PCD point cloud data from either
 //! a path or a binary buffer.
 //!
-//! [SeqReader](crate::SeqReader) lets you load points sequentially with
-//! [Iterator](std::iter::Iterator) interface. The points are stored in
-//! types implementing [PCDRecodRead](crate::PCDRecodRead) trait.
-//! You can build custom point type using `#[derive(PCDRecordRead)]` macro.
-//!
-//! ```rust
-//! use failure::Fallible;
-//! use pcd_rs::{SeqReaderBuilder, PCDRecordRead};
-//! use std::path::Path;
-//!
-//! #[derive(PCDRecordRead)]
-//! pub struct Point {
-//!     x: f32,
-//!     y: f32,
-//!     z: f32,
-//!     rgb: f32,
-//! }
-//!
-//! fn main() -> Fallible<()> {
-//!     let reader = SeqReaderBuilder::open("test_files/ascii.pcd")?;
-//!     let points = reader.collect::<Fallible<Vec<Point>>>()?;
-//!     assert_eq!(points.len(), 213);
-//!     Ok(())
-//! }
-//! ```
-
-// #![feature(const_generics)]
+//! - [seq_reader](crate::seq_reader) for reading PCD data
+//! - [seq_writer](crate::seq_writer) for writing PCD data
+//! - [record](crate::record) for building custom _point_ type
 
 pub extern crate byteorder;
 #[macro_use]
@@ -38,15 +14,12 @@ extern crate pcd_rs_derive;
 extern crate regex;
 
 pub mod error;
-mod record;
-mod seq_reader;
-mod seq_writer;
+pub mod record;
+pub mod seq_reader;
+pub mod seq_writer;
 mod utils;
 
-pub use pcd_rs_derive::*;
-pub use record::{PCDRecordRead, PCDRecordWrite};
-pub use seq_reader::{SeqReader, SeqReaderBuilder};
-pub use seq_writer::{SeqWriter, SeqWriterBuilder};
+pub use pcd_rs_derive::{PCDRecordRead, PCDRecordWrite};
 
 /// The struct keep meta data of PCD file.
 #[derive(Debug)]

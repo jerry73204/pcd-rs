@@ -55,7 +55,7 @@ pub fn f_pcd_record_read_derive(input: DeriveInput) -> SynResult<TokenStream> {
     };
 
     let expanded = quote! {
-        impl pcd_rs::PCDRecordRead for #struct_name {
+        impl pcd_rs::record::PCDRecordRead for #struct_name {
             fn read_spec() -> Vec<(Option<String>, pcd_rs::ValueKind, Option<usize>)> {
                 #read_spec_tokens
             }

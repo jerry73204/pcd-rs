@@ -1,5 +1,8 @@
 use failure::Fallible;
-use pcd_rs::{DataKind, PCDRecordRead, PCDRecordWrite, SeqReaderBuilder, SeqWriterBuilder};
+use pcd_rs::{
+    seq_reader::SeqReaderBuilder, seq_writer::SeqWriterBuilder, DataKind, PCDRecordRead,
+    PCDRecordWrite,
+};
 
 #[derive(Debug, PCDRecordRead, PCDRecordWrite, PartialEq)]
 pub struct Point {

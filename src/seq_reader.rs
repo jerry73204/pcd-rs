@@ -1,4 +1,30 @@
-use crate::{error::PCDError, DataKind, FieldDef, PCDMeta, PCDRecordRead};
+//! [SeqReader](crate::seq_reader::SeqReader) lets you load points sequentially with
+//! [Iterator](std::iter::Iterator) interface. The points are stored in
+//! types implementing [PCDRecordRead](crate::record::PCDRecordRead) trait.
+//! See [record](crate::record) moduel doc to implement your own point type.
+//!
+//! ```rust
+//! use failure::Fallible;
+//! use pcd_rs::{seq_reader::SeqReaderBuilder, PCDRecordRead};
+//! use std::path::Path;
+//!
+//! #[derive(PCDRecordRead)]
+//! pub struct Point {
+//!     x: f32,
+//!     y: f32,
+//!     z: f32,
+//!     rgb: f32,
+//! }
+//!
+//! fn main() -> Fallible<()> {
+//!     let reader = SeqReaderBuilder::open("test_files/ascii.pcd")?;
+//!     let points = reader.collect::<Fallible<Vec<Point>>>()?;
+//!     assert_eq!(points.len(), 213);
+//!     Ok(())
+//! }
+//! ```
+
+use crate::{error::PCDError, record::PCDRecordRead, DataKind, FieldDef, PCDMeta};
 use failure::Fallible;
 use std::{
     fs::File,
@@ -7,6 +33,7 @@ use std::{
     path::Path,
 };
 
+/// A reader type that loads points from PCD data.
 pub struct SeqReader<R: BufRead, T: PCDRecordRead> {
     meta: PCDMeta,
     record_count: usize,
@@ -56,6 +83,7 @@ impl<R: BufRead, T: PCDRecordRead> Iterator for SeqReader<R, T> {
     }
 }
 
+/// A builder type that builds [SeqReader](crate::seq_reader::SeqReader).
 pub struct SeqReaderBuilder;
 
 impl SeqReaderBuilder {
@@ -109,14 +137,14 @@ impl SeqReaderBuilder {
         Ok(pcd_reader)
     }
 
-    /// Load PCD data from a reader
+    /// Load PCD data from a reader.
     pub fn from_reader<Rd: Read, T: PCDRecordRead>(
         reader: Rd,
     ) -> Fallible<SeqReader<BufReader<Rd>, T>> {
         SeqReaderBuilder::from_buf_reader(BufReader::new(reader))
     }
 
-    /// Parse PCD data buffer
+    /// Parse PCD data buffer.
     pub fn from_buffer<T: PCDRecordRead>(
         buf: &[u8],
     ) -> Fallible<SeqReader<BufReader<Cursor<&[u8]>>, T>> {
@@ -124,7 +152,7 @@ impl SeqReaderBuilder {
         Ok(SeqReaderBuilder::from_reader(reader)?)
     }
 
-    /// Load PCD data given by file path
+    /// Load PCD data from a path to file.
     pub fn open<P: AsRef<Path>, T: PCDRecordRead>(
         path: P,
     ) -> Fallible<SeqReader<BufReader<File>, T>> {

@@ -1,5 +1,5 @@
 use failure::Fallible;
-use pcd_rs::{PCDRecordRead, SeqReaderBuilder};
+use pcd_rs::{seq_reader::SeqReaderBuilder, PCDRecordRead};
 use std::path::Path;
 
 #[derive(PCDRecordRead)]

@@ -1,6 +1,8 @@
-/// The error is raised when a PCD file is not understood by parser.
+//! The module defines most error types used by this crate.
+
 use crate::{FieldDef, ValueKind};
 
+/// The error returned from the crate.
 #[derive(Debug, Fail)]
 pub enum PCDError {
     #[fail(display = "Failed to parse PCD format at line {}: {}", line, desc)]

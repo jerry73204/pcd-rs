@@ -59,7 +59,7 @@ pub fn f_pcd_record_write_derive(input: DeriveInput) -> SynResult<TokenStream> {
     };
 
     let expanded = quote! {
-        impl pcd_rs::PCDRecordWrite for #struct_name {
+        impl pcd_rs::record::PCDRecordWrite for #struct_name {
             fn write_spec() -> Vec<(String, pcd_rs::ValueKind, usize)> {
                 #write_spec_tokens
             }
