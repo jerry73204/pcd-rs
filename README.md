@@ -14,7 +14,7 @@ Checkout [docs.rs](https://docs.rs/pcd-rs/) to see detailed usage.
 
 ## Examples
 
-### Load PCD file
+### Load PCD file into typed records
 
 ```rust
 use failure::Fallible;
@@ -32,6 +32,33 @@ pub struct Point {
 fn main() -> Fallible<()> {
     let reader = SeqReaderBuilder::open("test_files/ascii.pcd")?;
     let points = reader.collect::<Fallible<Vec<Point>>>()?;
+    assert_eq!(points.len(), 213);
+    Ok(())
+}
+```
+
+### Load PCD file into untyped records
+
+```rust
+use failure::Fallible;
+use pcd_rs::{seq_reader::SeqReaderBuilder, PCDRecordRead, record::{Record, Field}};
+use std::path::Path;
+
+fn main() -> Fallible<()> {
+    let reader = SeqReaderBuilder::open("test_files/ascii.pcd")?;
+    let points = reader.collect::<Fallible<Vec<Record>>>()?;
+
+    for point in points.iter() {
+        for field in point.iter() {
+            match field {
+                Field::I8(values) => {...},
+                Field::U8(values) => {...},
+                Field::F32(values) => {...},
+                ...
+            }
+        }
+    }
+
     assert_eq!(points.len(), 213);
     Ok(())
 }
