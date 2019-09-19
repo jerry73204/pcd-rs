@@ -94,34 +94,35 @@ impl SeqReaderBuilder {
         let mut line_count = 0;
         let meta = crate::utils::load_meta(&mut reader, &mut line_count)?;
 
-        let record_spec = T::read_spec();
-        let mismatch_error =
-            PCDError::new_schema_mismatch_error(record_spec.as_slice(), &meta.field_defs);
-        if record_spec.len() != meta.field_defs.len() {
-            return Err(mismatch_error.into());
-        }
-
-        for (record_field, meta_field) in record_spec.into_iter().zip(meta.field_defs.iter()) {
-            let (name_opt, record_kind, record_count_opt) = record_field;
-            let FieldDef {
-                name: meta_name,
-                kind: meta_kind,
-                count: meta_count,
-            } = meta_field;
-
-            if record_kind != *meta_kind {
+        if let Some(record_spec) = T::read_spec() {
+            let mismatch_error =
+                PCDError::new_schema_mismatch_error(record_spec.as_slice(), &meta.field_defs);
+            if record_spec.len() != meta.field_defs.len() {
                 return Err(mismatch_error.into());
             }
 
-            if let Some(name) = &name_opt {
-                if name != meta_name {
+            for (record_field, meta_field) in record_spec.into_iter().zip(meta.field_defs.iter()) {
+                let (name_opt, record_kind, record_count_opt) = record_field;
+                let FieldDef {
+                    name: meta_name,
+                    kind: meta_kind,
+                    count: meta_count,
+                } = meta_field;
+
+                if record_kind != *meta_kind {
                     return Err(mismatch_error.into());
                 }
-            }
 
-            if let Some(record_count) = record_count_opt {
-                if record_count != *meta_count as usize {
-                    return Err(mismatch_error.into());
+                if let Some(name) = &name_opt {
+                    if name != meta_name {
+                        return Err(mismatch_error.into());
+                    }
+                }
+
+                if let Some(record_count) = record_count_opt {
+                    if record_count != *meta_count as usize {
+                        return Err(mismatch_error.into());
+                    }
                 }
             }
         }

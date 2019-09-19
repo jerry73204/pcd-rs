@@ -1,5 +1,5 @@
 use failure::Fallible;
-use pcd_rs::{seq_reader::SeqReaderBuilder, PCDRecordRead};
+use pcd_rs::{record::Record, seq_reader::SeqReaderBuilder, PCDRecordRead};
 use std::path::Path;
 
 #[derive(PCDRecordRead)]
@@ -21,7 +21,7 @@ pub struct PointBinary {
 }
 
 #[test]
-fn load_ascii() -> Fallible<()> {
+fn load_ascii_static() -> Fallible<()> {
     let reader = SeqReaderBuilder::open("test_files/ascii.pcd")?;
     let points = reader.collect::<Fallible<Vec<PointAscii>>>()?;
     assert_eq!(points.len(), 213);
@@ -29,10 +29,27 @@ fn load_ascii() -> Fallible<()> {
 }
 
 #[test]
-fn load_binary() -> Fallible<()> {
+fn load_binary_static() -> Fallible<()> {
     let path = Path::new("test_files/binary.pcd");
     let reader = SeqReaderBuilder::open(path)?;
     let points = reader.collect::<Fallible<Vec<PointBinary>>>()?;
+    assert_eq!(points.len(), 28944);
+    Ok(())
+}
+
+#[test]
+fn load_ascii_dynamic() -> Fallible<()> {
+    let reader = SeqReaderBuilder::open("test_files/ascii.pcd")?;
+    let points = reader.collect::<Fallible<Vec<Record>>>()?;
+    assert_eq!(points.len(), 213);
+    Ok(())
+}
+
+#[test]
+fn load_binary_dynamic() -> Fallible<()> {
+    let path = Path::new("test_files/binary.pcd");
+    let reader = SeqReaderBuilder::open(path)?;
+    let points = reader.collect::<Fallible<Vec<Record>>>()?;
     assert_eq!(points.len(), 28944);
     Ok(())
 }
