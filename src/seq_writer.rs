@@ -44,6 +44,7 @@ use crate::{
 };
 use failure::Fallible;
 use std::{
+    borrow::Borrow,
     collections::HashSet,
     fs::File,
     io::{prelude::*, BufWriter, SeekFrom},
@@ -121,13 +122,23 @@ where
 impl SeqWriterBuilder<UntypedRecord, UntypedSchema> {
     /// Create new [SeqWriterBuilder](crate::seq_writer::SeqWriterBuilder) that
     /// stores header data.
-    pub fn new(
+    pub fn new<Name, Spec>(
         width: u64,
         height: u64,
         viewpoint: ViewPoint,
         data_kind: DataKind,
-        record_spec: Vec<(String, ValueKind, usize)>,
-    ) -> Fallible<Self> {
+        spec: Spec,
+    ) -> Fallible<Self>
+    where
+        Name: Borrow<str>,
+        Spec: Borrow<[(Name, ValueKind, usize)]>,
+    {
+        let record_spec = spec
+            .borrow()
+            .into_iter()
+            .map(|(name, kind, size)| (name.borrow().to_owned(), *kind, *size))
+            .collect::<Vec<(String, ValueKind, usize)>>();
+
         // Sanity check
         let mut names = HashSet::new();
 

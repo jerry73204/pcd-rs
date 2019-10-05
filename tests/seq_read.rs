@@ -42,7 +42,7 @@ fn load_binary_static() -> Fallible<()> {
 }
 
 #[test]
-fn load_ascii_dynamic() -> Fallible<()> {
+fn load_ascii_untyped() -> Fallible<()> {
     let reader = SeqReaderBuilder::<UntypedRecord, _>::open("test_files/ascii.pcd")?;
     let points = reader.collect::<Fallible<Vec<_>>>()?;
     assert_eq!(points.len(), 213);
@@ -50,7 +50,7 @@ fn load_ascii_dynamic() -> Fallible<()> {
 }
 
 #[test]
-fn load_binary_dynamic() -> Fallible<()> {
+fn load_binary_untyped() -> Fallible<()> {
     let path = Path::new("test_files/binary.pcd");
     let reader = SeqReaderBuilder::<UntypedRecord, _>::open(path)?;
     let points = reader.collect::<Fallible<Vec<_>>>()?;

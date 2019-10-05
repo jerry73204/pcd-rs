@@ -88,7 +88,7 @@ pub trait PCDRecordWrite: Sized {
 // Runtime record types
 
 /// An enum representation of untyped data fields.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Field {
     I8(Vec<i8>),
     I16(Vec<i16>),
@@ -134,8 +134,8 @@ impl Field {
 }
 
 /// Represents an untyped _point_ in PCD data.
-#[derive(Debug, Clone)]
-pub struct UntypedRecord(Vec<Field>);
+#[derive(Debug, Clone, PartialEq)]
+pub struct UntypedRecord(pub Vec<Field>);
 
 impl UntypedRecord {
     pub fn is_schema_consistent(&self, schema: &[(String, ValueKind, usize)]) -> bool {
@@ -289,7 +289,7 @@ impl UntypedRecord {
             }
         }
 
-        write!(writer, "{}", tokens.join(" "))?;
+        writeln!(writer, "{}", tokens.join(" "))?;
 
         Ok(())
     }
@@ -371,7 +371,6 @@ impl UntypedRecord {
 
         {
             let expect = field_defs.iter().map(|def| def.count as usize).sum();
-
             let error = PCDError::new_text_token_mismatch_error(expect, tokens.len());
             if tokens.len() != expect {
                 return Err(error.into());
@@ -382,7 +381,6 @@ impl UntypedRecord {
         let fields = field_defs
             .iter()
             .map(|def| {
-                let token = tokens_iter.next().unwrap();
                 let FieldDef {
                     name: _,
                     kind,
@@ -394,49 +392,49 @@ impl UntypedRecord {
                 let field = match kind {
                     ValueKind::I8 => {
                         let values = counter
-                            .map(|_| Ok(token.parse()?))
+                            .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
                             .collect::<Fallible<Vec<_>>>()?;
                         Field::I8(values)
                     }
                     ValueKind::I16 => {
                         let values = counter
-                            .map(|_| Ok(token.parse()?))
+                            .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
                             .collect::<Fallible<Vec<_>>>()?;
                         Field::I16(values)
                     }
                     ValueKind::I32 => {
                         let values = counter
-                            .map(|_| Ok(token.parse()?))
+                            .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
                             .collect::<Fallible<Vec<_>>>()?;
                         Field::I32(values)
                     }
                     ValueKind::U8 => {
                         let values = counter
-                            .map(|_| Ok(token.parse()?))
+                            .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
                             .collect::<Fallible<Vec<_>>>()?;
                         Field::U8(values)
                     }
                     ValueKind::U16 => {
                         let values = counter
-                            .map(|_| Ok(token.parse()?))
+                            .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
                             .collect::<Fallible<Vec<_>>>()?;
                         Field::U16(values)
                     }
                     ValueKind::U32 => {
                         let values = counter
-                            .map(|_| Ok(token.parse()?))
+                            .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
                             .collect::<Fallible<Vec<_>>>()?;
                         Field::U32(values)
                     }
                     ValueKind::F32 => {
                         let values = counter
-                            .map(|_| Ok(token.parse()?))
+                            .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
                             .collect::<Fallible<Vec<_>>>()?;
                         Field::F32(values)
                     }
                     ValueKind::F64 => {
                         let values = counter
-                            .map(|_| Ok(token.parse()?))
+                            .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
                             .collect::<Fallible<Vec<_>>>()?;
                         Field::F64(values)
                     }
