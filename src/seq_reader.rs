@@ -30,8 +30,9 @@
 
 use crate::{
     error::PCDError,
+    meta::{DataKind, FieldDef, PCDMeta},
     record::{PCDRecordRead, UntypedRecord},
-    DataKind, FieldDef, PCDMeta, SchemaKind, TypedSchema, UntypedSchema,
+    record::{SchemaKind, TypedSchema, UntypedSchema},
 };
 use failure::Fallible;
 use std::{

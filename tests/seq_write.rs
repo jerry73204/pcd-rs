@@ -1,9 +1,10 @@
 use failure::Fallible;
 use pcd_rs::{
+    meta::{DataKind, ValueKind},
     record::{Field, UntypedRecord},
     seq_reader::{SeqReaderBuilder, SeqReaderBuilderEx},
     seq_writer::{SeqWriterBuilder, SeqWriterBuilderEx, SeqWriterEx},
-    DataKind, PCDRecordRead, PCDRecordWrite, ValueKind,
+    PCDRecordRead, PCDRecordWrite,
 };
 
 #[derive(Debug, PCDRecordRead, PCDRecordWrite, PartialEq)]

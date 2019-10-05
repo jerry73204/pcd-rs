@@ -54,10 +54,26 @@
 //! [Record](crate::record::Record) already implements [PCDRecordRead](crate::record::PCDRecordRead),
 //! and can be directly passed to reader.
 
-use crate::{error::PCDError, FieldDef, ValueKind};
+use crate::{
+    error::PCDError,
+    meta::{FieldDef, ValueKind},
+};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use failure::Fallible;
 use std::io::prelude::*;
+
+/// Represents if a record type is typed or not.
+pub trait SchemaKind {}
+
+/// Indicates the record schema is known in compile-time.
+pub struct TypedSchema;
+
+impl SchemaKind for TypedSchema {}
+
+/// Indicates the record schema is only-known in run-time.
+pub struct UntypedSchema;
+
+impl SchemaKind for UntypedSchema {}
 
 /// [PCDRecordRead](crate::record::PCDRecordRead) is analogous to a _point_ returned from a reader.
 ///

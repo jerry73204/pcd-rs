@@ -7,9 +7,9 @@
 //! use failure::Fallible;
 //! use pcd_rs::{
 //!     prelude::*,
-//!     DataKind,
-//!     PCDRecordWrite,
+//!     meta::DataKind,
 //!     seq_writer::SeqWriterBuilder,
+//!     PCDRecordWrite,
 //! };
 //! use std::path::Path;
 //!
@@ -39,8 +39,9 @@
 //! ```
 
 use crate::{
+    meta::{DataKind, ValueKind, ViewPoint},
     record::{PCDRecordWrite, UntypedRecord},
-    DataKind, SchemaKind, TypedSchema, UntypedSchema, ValueKind, ViewPoint,
+    record::{SchemaKind, TypedSchema, UntypedSchema},
 };
 use failure::Fallible;
 use std::{
