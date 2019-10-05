@@ -55,7 +55,7 @@
 //! and can be directly passed to reader.
 
 use crate::{error::PCDError, FieldDef, ValueKind};
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use failure::Fallible;
 use std::io::prelude::*;
 
@@ -67,7 +67,7 @@ use std::io::prelude::*;
 /// When the PCD data is in ASCII mode, the record is represented by a line of literals.
 /// Otherwise if the data is in binary mode, the record is represented by a fixed size chunk.
 pub trait PCDRecordRead: Sized {
-    fn read_spec() -> Option<Vec<(Option<String>, ValueKind, Option<usize>)>>;
+    fn read_spec() -> Vec<(Option<String>, ValueKind, Option<usize>)>;
     fn read_chunk<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Fallible<Self>;
     fn read_line<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Fallible<Self>;
 }
@@ -100,15 +100,201 @@ pub enum Field {
     F64(Vec<f64>),
 }
 
-/// The alias represents an untyped _point_ in PCD data.
-pub type Record = Vec<Field>;
+impl Field {
+    pub fn kind(&self) -> ValueKind {
+        use Field as F;
+        use ValueKind as K;
 
-impl PCDRecordRead for Record {
-    fn read_spec() -> Option<Vec<(Option<String>, ValueKind, Option<usize>)>> {
-        None
+        match self {
+            F::I8(_) => K::I8,
+            F::I16(_) => K::I16,
+            F::I32(_) => K::I32,
+            F::U8(_) => K::U8,
+            F::U16(_) => K::U16,
+            F::U32(_) => K::U32,
+            F::F32(_) => K::F32,
+            F::F64(_) => K::F64,
+        }
     }
 
-    fn read_chunk<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Fallible<Self> {
+    pub fn count(&self) -> usize {
+        use Field as F;
+
+        match self {
+            F::I8(values) => values.len(),
+            F::I16(values) => values.len(),
+            F::I32(values) => values.len(),
+            F::U8(values) => values.len(),
+            F::U16(values) => values.len(),
+            F::U32(values) => values.len(),
+            F::F32(values) => values.len(),
+            F::F64(values) => values.len(),
+        }
+    }
+}
+
+/// Represents an untyped _point_ in PCD data.
+#[derive(Debug, Clone)]
+pub struct UntypedRecord(Vec<Field>);
+
+impl UntypedRecord {
+    pub fn is_schema_consistent(&self, schema: &[(String, ValueKind, usize)]) -> bool {
+        if self.0.len() != schema.len() {
+            return false;
+        }
+
+        for (field, (_name, kind, count)) in self.0.iter().zip(schema.iter()) {
+            use Field as F;
+            use ValueKind as K;
+
+            let matched = match field {
+                F::I8(values) => values.len() == *count && *kind == K::I8,
+                F::I16(values) => values.len() == *count && *kind == K::I16,
+                F::I32(values) => values.len() == *count && *kind == K::I32,
+                F::U8(values) => values.len() == *count && *kind == K::U8,
+                F::U16(values) => values.len() == *count && *kind == K::U16,
+                F::U32(values) => values.len() == *count && *kind == K::U32,
+                F::F32(values) => values.len() == *count && *kind == K::F32,
+                F::F64(values) => values.len() == *count && *kind == K::F64,
+            };
+
+            if !matched {
+                return false;
+            }
+        }
+
+        true
+    }
+
+    pub fn write_chunk<Writer>(
+        &self,
+        writer: &mut Writer,
+        spec: &[(String, ValueKind, usize)],
+    ) -> Fallible<()>
+    where
+        Writer: Write + Seek,
+    {
+        if !self.is_schema_consistent(spec) {
+            bail!("The content of record does not match the writer schema.");
+        }
+
+        for field in self.0.iter() {
+            use Field as F;
+
+            match field {
+                F::I8(values) => {
+                    values
+                        .iter()
+                        .map(|val| Ok(writer.write_i8(*val)?))
+                        .collect::<Fallible<Vec<_>>>()?;
+                }
+                F::I16(values) => {
+                    values
+                        .iter()
+                        .map(|val| Ok(writer.write_i16::<LittleEndian>(*val)?))
+                        .collect::<Fallible<Vec<_>>>()?;
+                }
+                F::I32(values) => {
+                    values
+                        .iter()
+                        .map(|val| Ok(writer.write_i32::<LittleEndian>(*val)?))
+                        .collect::<Fallible<Vec<_>>>()?;
+                }
+                F::U8(values) => {
+                    values
+                        .iter()
+                        .map(|val| Ok(writer.write_u8(*val)?))
+                        .collect::<Fallible<Vec<_>>>()?;
+                }
+                F::U16(values) => {
+                    values
+                        .iter()
+                        .map(|val| Ok(writer.write_u16::<LittleEndian>(*val)?))
+                        .collect::<Fallible<Vec<_>>>()?;
+                }
+                F::U32(values) => {
+                    values
+                        .iter()
+                        .map(|val| Ok(writer.write_u32::<LittleEndian>(*val)?))
+                        .collect::<Fallible<Vec<_>>>()?;
+                }
+                F::F32(values) => {
+                    values
+                        .iter()
+                        .map(|val| Ok(writer.write_f32::<LittleEndian>(*val)?))
+                        .collect::<Fallible<Vec<_>>>()?;
+                }
+                F::F64(values) => {
+                    values
+                        .iter()
+                        .map(|val| Ok(writer.write_f64::<LittleEndian>(*val)?))
+                        .collect::<Fallible<Vec<_>>>()?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn write_line<Writer>(
+        &self,
+        writer: &mut Writer,
+        spec: &[(String, ValueKind, usize)],
+    ) -> Fallible<()>
+    where
+        Writer: Write + Seek,
+    {
+        if !self.is_schema_consistent(spec) {
+            bail!("The content of record does not match the writer schema.");
+        }
+
+        let mut tokens = vec![];
+
+        for field in self.0.iter() {
+            use Field as F;
+
+            match field {
+                F::I8(values) => {
+                    let iter = values.iter().map(|val| val.to_string());
+                    tokens.extend(iter);
+                }
+                F::I16(values) => {
+                    let iter = values.iter().map(|val| val.to_string());
+                    tokens.extend(iter);
+                }
+                F::I32(values) => {
+                    let iter = values.iter().map(|val| val.to_string());
+                    tokens.extend(iter);
+                }
+                F::U8(values) => {
+                    let iter = values.iter().map(|val| val.to_string());
+                    tokens.extend(iter);
+                }
+                F::U16(values) => {
+                    let iter = values.iter().map(|val| val.to_string());
+                    tokens.extend(iter);
+                }
+                F::U32(values) => {
+                    let iter = values.iter().map(|val| val.to_string());
+                    tokens.extend(iter);
+                }
+                F::F32(values) => {
+                    let iter = values.iter().map(|val| val.to_string());
+                    tokens.extend(iter);
+                }
+                F::F64(values) => {
+                    let iter = values.iter().map(|val| val.to_string());
+                    tokens.extend(iter);
+                }
+            }
+        }
+
+        write!(writer, "{}", tokens.join(" "))?;
+
+        Ok(())
+    }
+
+    pub fn read_chunk<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Fallible<Self> {
         let fields = field_defs
             .iter()
             .map(|def| {
@@ -175,10 +361,10 @@ impl PCDRecordRead for Record {
             })
             .collect::<Fallible<Vec<_>>>()?;
 
-        Ok(fields)
+        Ok(Self(fields))
     }
 
-    fn read_line<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Fallible<Self> {
+    pub fn read_line<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Fallible<Self> {
         let mut line = String::new();
         reader.read_line(&mut line)?;
         let tokens = line.split_ascii_whitespace().collect::<Vec<_>>();
@@ -260,15 +446,15 @@ impl PCDRecordRead for Record {
             })
             .collect::<Fallible<Vec<_>>>()?;
 
-        Ok(fields)
+        Ok(Self(fields))
     }
 }
 
 // impl for primitive types
 
 impl PCDRecordRead for u8 {
-    fn read_spec() -> Option<Vec<(Option<String>, ValueKind, Option<usize>)>> {
-        Some(vec![(None, ValueKind::U8, Some(1))])
+    fn read_spec() -> Vec<(Option<String>, ValueKind, Option<usize>)> {
+        vec![(None, ValueKind::U8, Some(1))]
     }
 
     fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
@@ -284,8 +470,8 @@ impl PCDRecordRead for u8 {
 }
 
 impl PCDRecordRead for i8 {
-    fn read_spec() -> Option<Vec<(Option<String>, ValueKind, Option<usize>)>> {
-        Some(vec![(None, ValueKind::I8, Some(1))])
+    fn read_spec() -> Vec<(Option<String>, ValueKind, Option<usize>)> {
+        vec![(None, ValueKind::I8, Some(1))]
     }
 
     fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
@@ -303,8 +489,8 @@ impl PCDRecordRead for i8 {
 macro_rules! impl_primitive {
     ($ty:ty, $kind:ident, $read:ident) => {
         impl PCDRecordRead for $ty {
-            fn read_spec() -> Option<Vec<(Option<String>, ValueKind, Option<usize>)>> {
-                Some(vec![(None, ValueKind::$kind, Some(1))])
+            fn read_spec() -> Vec<(Option<String>, ValueKind, Option<usize>)> {
+                vec![(None, ValueKind::$kind, Some(1))]
             }
 
             fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {

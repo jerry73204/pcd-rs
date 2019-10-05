@@ -1,7 +1,8 @@
 use failure::Fallible;
 use pcd_rs::{
-    seq_reader::SeqReaderBuilder, seq_writer::SeqWriterBuilder, DataKind, PCDRecordRead,
-    PCDRecordWrite,
+    seq_reader::{SeqReaderBuilder, SeqReaderBuilderEx},
+    seq_writer::{SeqWriterBuilder, SeqWriterBuilderEx, SeqWriterEx},
+    DataKind, PCDRecordRead, PCDRecordWrite,
 };
 
 #[derive(Debug, PCDRecordRead, PCDRecordWrite, PartialEq)]
@@ -33,15 +34,16 @@ fn dump_ascii() -> Fallible<()> {
         },
     ];
 
-    let mut writer = SeqWriterBuilder::<Point>::new(300, 1, Default::default(), DataKind::ASCII)?
-        .create(path)?;
+    let mut writer =
+        SeqWriterBuilder::<Point, _>::new(300, 1, Default::default(), DataKind::ASCII)?
+            .create(path)?;
 
     for point in dump_points.iter() {
         writer.push(&point)?;
     }
 
-    let reader = SeqReaderBuilder::open(path)?;
-    let load_points = reader.collect::<Fallible<Vec<Point>>>()?;
+    let reader = SeqReaderBuilder::<Point, _>::open(path)?;
+    let load_points = reader.collect::<Fallible<Vec<_>>>()?;
 
     assert_eq!(dump_points, load_points);
     std::fs::remove_file(path)?;
@@ -71,15 +73,16 @@ fn dump_binary() -> Fallible<()> {
         },
     ];
 
-    let mut writer = SeqWriterBuilder::<Point>::new(300, 1, Default::default(), DataKind::Binary)?
-        .create(path)?;
+    let mut writer =
+        SeqWriterBuilder::<Point, _>::new(300, 1, Default::default(), DataKind::Binary)?
+            .create(path)?;
 
     for point in dump_points.iter() {
         writer.push(&point)?;
     }
 
-    let reader = SeqReaderBuilder::open(path)?;
-    let load_points = reader.collect::<Fallible<Vec<Point>>>()?;
+    let reader = SeqReaderBuilder::<Point, _>::open(path)?;
+    let load_points = reader.collect::<Fallible<Vec<_>>>()?;
 
     assert_eq!(dump_points, load_points);
     std::fs::remove_file(path)?;

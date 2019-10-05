@@ -14,6 +14,7 @@ extern crate pcd_rs_derive;
 extern crate regex;
 
 pub mod error;
+pub mod prelude;
 pub mod record;
 pub mod seq_reader;
 pub mod seq_writer;
@@ -94,3 +95,14 @@ pub struct FieldDef {
     pub kind: ValueKind,
     pub count: u64,
 }
+
+/// Represents if a record type is typed or not.
+pub trait SchemaKind {}
+
+pub struct TypedSchema;
+
+impl SchemaKind for TypedSchema {}
+
+pub struct UntypedSchema;
+
+impl SchemaKind for UntypedSchema {}
