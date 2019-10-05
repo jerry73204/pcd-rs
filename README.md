@@ -14,24 +14,23 @@ Checkout [docs.rs](https://docs.rs/pcd-rs/) to see detailed usage.
 
 ## Examples
 
-### Load PCD file into typed records
+### Load PCD file into structs
 
 ```rust
 use failure::Fallible;
-use pcd_rs::{seq_reader::SeqReaderBuilder, PCDRecordRead};
-use std::path::Path;
+use pcd_rs::{prelude::*, seq_reader::SeqReaderBuilder, PCDRecordRead};
 
 #[derive(PCDRecordRead)]
 pub struct Point {
-    x: f32,
-    y: f32,
-    z: f32,
-    rgb: f32,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub rgb: f32,
 }
 
 fn main() -> Fallible<()> {
-    let reader = SeqReaderBuilder::open("test_files/ascii.pcd")?;
-    let points = reader.collect::<Fallible<Vec<Point>>>()?;
+    let reader = SeqReaderBuilder::<Point, _>::open("test_files/ascii.pcd")?;
+    let points = reader.collect::<Fallible<Vec<_>>>()?;
     assert_eq!(points.len(), 213);
     Ok(())
 }
@@ -41,35 +40,44 @@ fn main() -> Fallible<()> {
 
 ```rust
 use failure::Fallible;
-use pcd_rs::{seq_reader::SeqReaderBuilder, PCDRecordRead, record::{Record, Field}};
-use std::path::Path;
+use pcd_rs::{
+    prelude::*,
+    record::{Field, UntypedRecord},
+    seq_reader::SeqReaderBuilder,
+};
 
 fn main() -> Fallible<()> {
-    let reader = SeqReaderBuilder::open("test_files/ascii.pcd")?;
-    let points = reader.collect::<Fallible<Vec<Record>>>()?;
+    let reader = SeqReaderBuilder::<UntypedRecord, _>::open("test_files/ascii.pcd")?;
+    let points = reader.collect::<Fallible<Vec<_>>>()?;
 
     for point in points.iter() {
-        for field in point.iter() {
+        for field in point.0.iter() {
             match field {
-                Field::I8(values) => {...},
-                Field::U8(values) => {...},
-                Field::F32(values) => {...},
-                ...
+                Field::I8(values) => {
+                    println!("i8 values: {:?}", values);
+                }
+                Field::U8(values) => {
+                    println!("u8 values: {:?}", values);
+                }
+                Field::F32(values) => {
+                    println!("f32 values: {:?}", values);
+                }
+                _ => {
+                    println!("other kinds of values");
+                }
             }
         }
     }
 
-    assert_eq!(points.len(), 213);
     Ok(())
 }
 ```
 
-### Write to PCD file
+### Write struct to PCD file
 
 ```rust
 use failure::Fallible;
-use pcd_rs::{DataKind, seq_writer::SeqWriterBuilder, PCDRecordWrite};
-use std::path::Path;
+use pcd_rs::{meta::DataKind, prelude::*, seq_writer::SeqWriterBuilder, PCDRecordWrite};
 
 #[derive(PCDRecordWrite)]
 pub struct Point {
@@ -81,7 +89,7 @@ pub struct Point {
 fn main() -> Fallible<()> {
     let viewpoint = Default::default();
     let kind = DataKind::ASCII;
-    let mut writer = SeqWriterBuilder::<Point>::new(300, 1, viewpoint, kind)?
+    let mut writer = SeqWriterBuilder::<Point, _>::new(300, 1, viewpoint, kind)?
         .create("test_files/dump.pcd")?;
 
     let point = Point {
@@ -89,6 +97,40 @@ fn main() -> Fallible<()> {
         y: 2.71828,
         z: -5.0,
     };
+
+    writer.push(&point)?;
+
+    Ok(())
+}
+```
+
+### Write untyped record to PCD file
+
+```rust
+use failure::Fallible;
+use pcd_rs::{
+    meta::{DataKind, ValueKind},
+    prelude::*,
+    record::{Field, UntypedRecord},
+    seq_writer::SeqWriterBuilder,
+};
+
+fn main() -> Fallible<()> {
+    let viewpoint = Default::default();
+    let kind = DataKind::ASCII;
+    let schema = vec![
+        ("x", ValueKind::F32, 1),
+        ("y", ValueKind::F32, 1),
+        ("z", ValueKind::F32, 1),
+    ];
+    let mut writer = SeqWriterBuilder::<UntypedRecord, _>::new(300, 1, viewpoint, kind, schema)?
+        .create("test_files/dump.pcd")?;
+
+    let point = UntypedRecord(vec![
+        Field::F32(vec![3.14159]),
+        Field::F32(vec![2.71828]),
+        Field::F32(vec![-5.0]),
+    ]);
 
     writer.push(&point)?;
 
