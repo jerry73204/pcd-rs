@@ -48,11 +48,6 @@
 //!     whatever_name: u32,
 //! }
 //! ```
-//!
-//! The module provides [Field](crate::record::Field), an enum of data fields, and
-//! [Record](crate::record::Record), an alias of `Vec<Field>` for untyped data loading.
-//! [Record](crate::record::Record) already implements [PCDRecordRead](crate::record::PCDRecordRead),
-//! and can be directly passed to reader.
 
 use crate::{
     error::PCDError,
