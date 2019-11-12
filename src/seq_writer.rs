@@ -33,7 +33,7 @@
 //!     };
 //!
 //!     writer.push(&point)?;
-//!
+//!     writer.finish()?;
 //!     Ok(())
 //! }
 //! ```
@@ -192,6 +192,7 @@ where
     num_records: usize,
     points_arg_begin: u64,
     points_arg_width: usize,
+    finished: bool,
 }
 
 impl<Writer, Record, Kind> SeqWriter<Writer, Record, Kind>
@@ -207,6 +208,7 @@ where
             num_records: 0,
             points_arg_begin,
             points_arg_width,
+            finished: false,
         };
         Ok(seq_writer)
     }
@@ -295,10 +297,11 @@ where
         Ok((points_arg_begin, points_arg_width))
     }
 
-    fn increase_record_count(&mut self) -> Fallible<()> {
-        self.num_records += 1;
-        let eof_pos = self.writer.seek(SeekFrom::Current(0))?;
-
+    /// Finish the writer.
+    ///
+    /// The method consumes the writer must be called once when finished.
+    /// Otherwise it will panic when it drops.
+    pub fn finish(mut self) -> Fallible<()> {
         self.writer.seek(SeekFrom::Start(self.points_arg_begin))?;
         write!(
             self.writer,
@@ -306,8 +309,7 @@ where
             self.num_records,
             width = self.points_arg_width
         )?;
-        self.writer.seek(SeekFrom::Start(eof_pos))?;
-
+        self.finished = true;
         Ok(())
     }
 }
@@ -325,7 +327,7 @@ where
             DataKind::ASCII => record.write_line(&mut self.writer)?,
         }
 
-        self.increase_record_count()?;
+        self.num_records += 1;
         Ok(())
     }
 }
@@ -342,7 +344,19 @@ where
             DataKind::ASCII => record.write_line(&mut self.writer, &self.builder.record_spec)?,
         }
 
-        self.increase_record_count()?;
+        self.num_records += 1;
         Ok(())
+    }
+}
+
+impl<Writer, Record, Kind> Drop for SeqWriter<Writer, Record, Kind>
+where
+    Writer: Write + Seek,
+    Kind: SchemaKind,
+{
+    fn drop(&mut self) {
+        if !self.finished {
+            panic!("call finish() before SeqWriter drops");
+        }
     }
 }

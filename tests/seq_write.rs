@@ -44,6 +44,8 @@ fn write_ascii_static() -> Fallible<()> {
         writer.push(&point)?;
     }
 
+    writer.finish()?;
+
     let reader = SeqReaderBuilder::<Point, _>::open(path)?;
     let load_points = reader.collect::<Fallible<Vec<_>>>()?;
 
@@ -82,6 +84,8 @@ fn write_binary_static() -> Fallible<()> {
     for point in dump_points.iter() {
         writer.push(&point)?;
     }
+
+    writer.finish()?;
 
     let reader = SeqReaderBuilder::<Point, _>::open(path)?;
     let load_points = reader.collect::<Fallible<Vec<_>>>()?;
@@ -132,6 +136,8 @@ fn write_ascii_untyped() -> Fallible<()> {
         writer.push(&point)?;
     }
 
+    writer.finish()?;
+
     let reader = SeqReaderBuilder::<UntypedRecord, _>::open(path)?;
     let load_points = reader.collect::<Fallible<Vec<_>>>()?;
 
@@ -181,6 +187,8 @@ fn write_binary_untyped() -> Fallible<()> {
     for point in dump_points.iter() {
         writer.push(&point)?;
     }
+
+    writer.finish()?;
 
     let reader = SeqReaderBuilder::<UntypedRecord, _>::open(path)?;
     let load_points = reader.collect::<Fallible<Vec<_>>>()?;

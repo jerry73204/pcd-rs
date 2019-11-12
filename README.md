@@ -99,6 +99,7 @@ fn main() -> Fallible<()> {
     };
 
     writer.push(&point)?;
+    writer.finish()?;
 
     Ok(())
 }
@@ -133,6 +134,7 @@ fn main() -> Fallible<()> {
     ]);
 
     writer.push(&point)?;
+    writer.finish()?;
 
     Ok(())
 }
