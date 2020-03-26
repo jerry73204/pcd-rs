@@ -12,10 +12,10 @@ mod derive_write;
 use proc_macro::TokenStream;
 use syn::DeriveInput;
 
-/// Derives PCDRecordRead trait on normal struct or tuple struct.
+/// Derives PcdDeserialize trait on normal struct or tuple struct.
 ///
 /// The field type can be either primitive, array of primitive or [Vec](std::vec::Vec) of primitive.
-#[proc_macro_derive(PCDRecordRead, attributes(pcd_rename, pcd_ignore_name))]
+#[proc_macro_derive(PcdDeserialize, attributes(pcd_rename, pcd_ignore_name))]
 pub fn pcd_record_read_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let derive_read_tokens = derive_read::f_pcd_record_read_derive(input)
@@ -23,10 +23,10 @@ pub fn pcd_record_read_derive(input: TokenStream) -> TokenStream {
     TokenStream::from(derive_read_tokens)
 }
 
-/// Derives PCDRecordWrite trait on normal struct or tuple struct.
+/// Derives PcdSerialize trait on normal struct or tuple struct.
 ///
 /// The field type can be either primitive or array of primitive.
-#[proc_macro_derive(PCDRecordWrite, attributes(pcd_rename))]
+#[proc_macro_derive(PcdSerialize, attributes(pcd_rename))]
 pub fn pcd_record_write_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let derive_write_tokens = derive_write::f_pcd_record_write_derive(input)

@@ -1,6 +1,6 @@
 //! [SeqWriter](crate::seq_writer::SeqWriter) lets you write points sequentially to
 //! PCD file or writer given by user. The written point type must implement
-//! [PCDRecordWrite](crate::record::PCDRecordWrite) trait.
+//! [PcdSerialize](crate::record::PcdSerialize) trait.
 //! See [record](crate::record) moduel doc to implement your own point type.
 //!
 //! ```rust
@@ -9,11 +9,11 @@
 //!     prelude::*,
 //!     meta::DataKind,
 //!     seq_writer::SeqWriterBuilder,
-//!     PCDRecordWrite,
+//!     PcdSerialize,
 //! };
 //! use std::path::Path;
 //!
-//! #[derive(PCDRecordWrite)]
+//! #[derive(PcdSerialize)]
 //! pub struct Point {
 //!     x: f32,
 //!     y: f32,
@@ -40,7 +40,7 @@
 
 use crate::{
     meta::{DataKind, ValueKind, ViewPoint},
-    record::{PCDRecordWrite, UntypedRecord},
+    record::{PcdSerialize, DynRecord},
     record::{SchemaKind, TypedSchema, UntypedSchema},
 };
 use failure::Fallible;
@@ -97,7 +97,7 @@ where
 
 impl<Record> SeqWriterBuilder<Record, TypedSchema>
 where
-    Record: PCDRecordWrite,
+    Record: PcdSerialize,
 {
     /// Create new [SeqWriterBuilder](crate::seq_writer::SeqWriterBuilder) that
     /// stores header data.
@@ -120,7 +120,7 @@ where
     }
 }
 
-impl SeqWriterBuilder<UntypedRecord, UntypedSchema> {
+impl SeqWriterBuilder<DynRecord, UntypedSchema> {
     /// Create new [SeqWriterBuilder](crate::seq_writer::SeqWriterBuilder) that
     /// stores header data.
     pub fn new<Name, Spec>(
@@ -318,7 +318,7 @@ impl<Writer, Record> SeqWriterEx<Writer, Record, TypedSchema>
     for SeqWriter<Writer, Record, TypedSchema>
 where
     Writer: Write + Seek,
-    Record: PCDRecordWrite,
+    Record: PcdSerialize,
 {
     /// Writes a new point to PCD data.
     fn push(&mut self, record: &Record) -> Fallible<()> {
@@ -332,13 +332,13 @@ where
     }
 }
 
-impl<Writer> SeqWriterEx<Writer, UntypedRecord, UntypedSchema>
-    for SeqWriter<Writer, UntypedRecord, UntypedSchema>
+impl<Writer> SeqWriterEx<Writer, DynRecord, UntypedSchema>
+    for SeqWriter<Writer, DynRecord, UntypedSchema>
 where
     Writer: Write + Seek,
 {
     /// Writes a new point to PCD data.
-    fn push(&mut self, record: &UntypedRecord) -> Fallible<()> {
+    fn push(&mut self, record: &DynRecord) -> Fallible<()> {
         match self.builder.data_kind {
             DataKind::Binary => record.write_chunk(&mut self.writer, &self.builder.record_spec)?,
             DataKind::ASCII => record.write_line(&mut self.writer, &self.builder.record_spec)?,

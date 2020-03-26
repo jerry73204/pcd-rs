@@ -12,11 +12,15 @@ pub extern crate failure;
 pub extern crate byteorder;
 
 pub mod error;
-pub mod meta;
-pub mod prelude;
+pub mod metas;
+pub mod reader;
 pub mod record;
-pub mod seq_reader;
-pub mod seq_writer;
 mod utils;
+pub mod writer;
 
-pub use pcd_rs_derive::{PCDRecordRead, PCDRecordWrite};
+pub use error::PCDError;
+pub use metas::{DataKind, FieldDef, PCDMeta, TypeKind, ValueKind, ViewPoint};
+pub use pcd_rs_derive::{PcdDeserialize, PcdSerialize};
+pub use reader::{Reader, ReaderBuilder};
+pub use record::{DynRecord, Field};
+pub use writer::{Writer, WriterBuilder};

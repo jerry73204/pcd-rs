@@ -1,13 +1,10 @@
 use failure::Fallible;
 use pcd_rs::{
-    meta::{DataKind, ValueKind},
-    record::{Field, UntypedRecord},
-    seq_reader::{SeqReaderBuilder, SeqReaderBuilderEx},
-    seq_writer::{SeqWriterBuilder, SeqWriterBuilderEx, SeqWriterEx},
-    PCDRecordRead, PCDRecordWrite,
+    DataKind, DynRecord, Field, PcdDeserialize, PcdSerialize, Reader, ReaderBuilder, ValueKind,
+    Writer, WriterBuilder,
 };
 
-#[derive(Debug, PCDRecordRead, PCDRecordWrite, PartialEq)]
+#[derive(Debug, PcdDeserialize, PcdSerialize, PartialEq)]
 pub struct Point {
     #[pcd_rename("new_x")]
     x: f32,
@@ -36,9 +33,8 @@ fn write_ascii_static() -> Fallible<()> {
         },
     ];
 
-    let mut writer =
-        SeqWriterBuilder::<Point, _>::new(300, 1, Default::default(), DataKind::ASCII)?
-            .create(path)?;
+    let mut writer: Writer<Point, _> =
+        WriterBuilder::new(300, 1, Default::default(), DataKind::ASCII)?.create(path)?;
 
     for point in dump_points.iter() {
         writer.push(&point)?;
@@ -46,7 +42,7 @@ fn write_ascii_static() -> Fallible<()> {
 
     writer.finish()?;
 
-    let reader = SeqReaderBuilder::<Point, _>::open(path)?;
+    let reader: Reader<Point, _> = ReaderBuilder::from_path(path)?;
     let load_points = reader.collect::<Fallible<Vec<_>>>()?;
 
     assert_eq!(dump_points, load_points);
@@ -77,9 +73,8 @@ fn write_binary_static() -> Fallible<()> {
         },
     ];
 
-    let mut writer =
-        SeqWriterBuilder::<Point, _>::new(300, 1, Default::default(), DataKind::Binary)?
-            .create(path)?;
+    let mut writer: Writer<Point, _> =
+        WriterBuilder::new(300, 1, Default::default(), DataKind::Binary)?.create(path)?;
 
     for point in dump_points.iter() {
         writer.push(&point)?;
@@ -87,7 +82,7 @@ fn write_binary_static() -> Fallible<()> {
 
     writer.finish()?;
 
-    let reader = SeqReaderBuilder::<Point, _>::open(path)?;
+    let reader: Reader<Point, _> = ReaderBuilder::from_path(path)?;
     let load_points = reader.collect::<Fallible<Vec<_>>>()?;
 
     assert_eq!(dump_points, load_points);
@@ -100,17 +95,17 @@ fn write_binary_static() -> Fallible<()> {
 fn write_ascii_untyped() -> Fallible<()> {
     let path = "test_files/dump_ascii_untyped.pcd";
     let dump_points = vec![
-        UntypedRecord(vec![
+        DynRecord(vec![
             Field::F32(vec![3.14159]),
             Field::U8(vec![2, 1, 7]),
             Field::I32(vec![-5]),
         ]),
-        UntypedRecord(vec![
+        DynRecord(vec![
             Field::F32(vec![-0.0]),
             Field::U8(vec![254, 6, 98]),
             Field::I32(vec![7]),
         ]),
-        UntypedRecord(vec![
+        DynRecord(vec![
             Field::F32(vec![5.6]),
             Field::U8(vec![4, 0, 111]),
             Field::I32(vec![-100000]),
@@ -123,14 +118,10 @@ fn write_ascii_untyped() -> Fallible<()> {
         ("z", ValueKind::I32, 1),
     ];
 
-    let mut writer = SeqWriterBuilder::<UntypedRecord, _>::new(
-        300,
-        1,
-        Default::default(),
-        DataKind::ASCII,
-        schema,
-    )?
-    .create(path)?;
+    let mut writer: Writer<DynRecord, _> =
+        WriterBuilder::new(300, 1, Default::default(), DataKind::ASCII)?
+            .schema(schema)?
+            .create(path)?;
 
     for point in dump_points.iter() {
         writer.push(&point)?;
@@ -138,7 +129,7 @@ fn write_ascii_untyped() -> Fallible<()> {
 
     writer.finish()?;
 
-    let reader = SeqReaderBuilder::<UntypedRecord, _>::open(path)?;
+    let reader: Reader<DynRecord, _> = ReaderBuilder::from_path(path)?;
     let load_points = reader.collect::<Fallible<Vec<_>>>()?;
 
     assert_eq!(dump_points, load_points);
@@ -152,17 +143,17 @@ fn write_binary_untyped() -> Fallible<()> {
     let path = "test_files/dump_binary_untyped.pcd";
 
     let dump_points = vec![
-        UntypedRecord(vec![
+        DynRecord(vec![
             Field::F32(vec![3.14159]),
             Field::U8(vec![2, 1, 7]),
             Field::I32(vec![-5]),
         ]),
-        UntypedRecord(vec![
+        DynRecord(vec![
             Field::F32(vec![-0.0]),
             Field::U8(vec![254, 6, 98]),
             Field::I32(vec![7]),
         ]),
-        UntypedRecord(vec![
+        DynRecord(vec![
             Field::F32(vec![5.6]),
             Field::U8(vec![4, 0, 111]),
             Field::I32(vec![-100000]),
@@ -175,14 +166,10 @@ fn write_binary_untyped() -> Fallible<()> {
         ("z", ValueKind::I32, 1),
     ];
 
-    let mut writer = SeqWriterBuilder::<UntypedRecord, _>::new(
-        300,
-        1,
-        Default::default(),
-        DataKind::Binary,
-        schema,
-    )?
-    .create(path)?;
+    let mut writer: Writer<DynRecord, _> =
+        WriterBuilder::new(300, 1, Default::default(), DataKind::Binary)?
+            .schema(schema)?
+            .create(path)?;
 
     for point in dump_points.iter() {
         writer.push(&point)?;
@@ -190,7 +177,7 @@ fn write_binary_untyped() -> Fallible<()> {
 
     writer.finish()?;
 
-    let reader = SeqReaderBuilder::<UntypedRecord, _>::open(path)?;
+    let reader: Reader<DynRecord, _> = ReaderBuilder::from_path(path)?;
     let load_points = reader.collect::<Fallible<Vec<_>>>()?;
 
     assert_eq!(dump_points, load_points);

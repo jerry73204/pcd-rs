@@ -1,6 +1,6 @@
 use crate::{
     error::PCDError,
-    meta::{DataKind, FieldDef, PCDMeta, TypeKind, ValueKind, ViewPoint},
+    metas::{DataKind, FieldDef, PCDMeta, TypeKind, ValueKind, ViewPoint},
 };
 use failure::Fallible;
 use std::{collections::HashSet, io::prelude::*};

@@ -1,12 +1,8 @@
 use failure::Fallible;
-use pcd_rs::{
-    record::UntypedRecord,
-    seq_reader::{SeqReaderBuilder, SeqReaderBuilderEx},
-    PCDRecordRead,
-};
+use pcd_rs::{DynRecord, PcdDeserialize, Reader, ReaderBuilder};
 use std::path::Path;
 
-#[derive(PCDRecordRead)]
+#[derive(PcdDeserialize)]
 pub struct PointAscii {
     #[pcd_ignore_name]
     pub x: f32,
@@ -15,7 +11,7 @@ pub struct PointAscii {
     pub rgb: f32,
 }
 
-#[derive(PCDRecordRead)]
+#[derive(PcdDeserialize)]
 pub struct PointBinary {
     pub x: f32,
     pub y: f32,
@@ -26,7 +22,7 @@ pub struct PointBinary {
 
 #[test]
 fn load_ascii_static() -> Fallible<()> {
-    let reader = SeqReaderBuilder::<PointAscii, _>::open("test_files/ascii.pcd")?;
+    let reader: Reader<PointAscii, _> = ReaderBuilder::from_path("test_files/ascii.pcd")?;
     let points = reader.collect::<Fallible<Vec<_>>>()?;
     assert_eq!(points.len(), 213);
     Ok(())
@@ -35,7 +31,7 @@ fn load_ascii_static() -> Fallible<()> {
 #[test]
 fn load_binary_static() -> Fallible<()> {
     let path = Path::new("test_files/binary.pcd");
-    let reader = SeqReaderBuilder::<PointBinary, _>::open(path)?;
+    let reader: Reader<PointBinary, _> = ReaderBuilder::from_path(path)?;
     let points = reader.collect::<Fallible<Vec<_>>>()?;
     assert_eq!(points.len(), 28944);
     Ok(())
@@ -43,7 +39,7 @@ fn load_binary_static() -> Fallible<()> {
 
 #[test]
 fn load_ascii_untyped() -> Fallible<()> {
-    let reader = SeqReaderBuilder::<UntypedRecord, _>::open("test_files/ascii.pcd")?;
+    let reader: Reader<DynRecord, _> = ReaderBuilder::from_path("test_files/ascii.pcd")?;
     let points = reader.collect::<Fallible<Vec<_>>>()?;
     assert_eq!(points.len(), 213);
     Ok(())
@@ -52,7 +48,7 @@ fn load_ascii_untyped() -> Fallible<()> {
 #[test]
 fn load_binary_untyped() -> Fallible<()> {
     let path = Path::new("test_files/binary.pcd");
-    let reader = SeqReaderBuilder::<UntypedRecord, _>::open(path)?;
+    let reader: Reader<DynRecord, _> = ReaderBuilder::from_path(path)?;
     let points = reader.collect::<Fallible<Vec<_>>>()?;
     assert_eq!(points.len(), 28944);
     Ok(())

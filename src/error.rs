@@ -1,6 +1,6 @@
 //! The module defines most error types used by this crate.
 
-use crate::meta::{FieldDef, ValueKind};
+use crate::metas::{FieldDef, ValueKind};
 
 /// The error returned from the crate.
 #[derive(Debug, Fail)]

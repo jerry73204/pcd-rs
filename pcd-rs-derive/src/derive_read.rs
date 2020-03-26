@@ -19,7 +19,7 @@ pub fn f_pcd_record_read_derive(input: DeriveInput) -> SynResult<TokenStream> {
     if !input.generics.params.is_empty() {
         return Err(SynError::new(
             input.span(),
-            "Canont derive PCDRecordRead for struct with generics",
+            "Canont derive PcdDeserialize for struct with generics",
         ));
     }
 
@@ -28,13 +28,13 @@ pub fn f_pcd_record_read_derive(input: DeriveInput) -> SynResult<TokenStream> {
         Data::Enum(_) => {
             return Err(SynError::new(
                 input.span(),
-                "Canont derive PCDRecordRead for enum",
+                "Canont derive PcdDeserialize for enum",
             ))
         }
         Data::Union(_) => {
             return Err(SynError::new(
                 input.span(),
-                "Canont derive PCDRecordRead for union",
+                "Canont derive PcdDeserialize for union",
             ))
         }
     };
@@ -49,24 +49,28 @@ pub fn f_pcd_record_read_derive(input: DeriveInput) -> SynResult<TokenStream> {
         Fields::Unit => {
             return Err(SynError::new(
                 input.span(),
-                "Canont derive PCDRecordRead for unit struct",
+                "Canont derive PcdDeserialize for unit struct",
             ))
         }
     };
 
     let expanded = quote! {
-        impl pcd_rs::record::PCDRecordRead for #struct_name {
-            fn read_spec() -> Vec<(Option<String>, pcd_rs::meta::ValueKind, Option<usize>)> {
+        impl pcd_rs::record::PcdDeserialize for #struct_name {
+            fn is_dynamic() -> bool {
+                false
+            }
+
+            fn read_spec() -> Vec<(Option<String>, pcd_rs::metas::ValueKind, Option<usize>)> {
                 #read_spec_tokens
             }
 
-            fn read_chunk<R: std::io::BufRead>(reader: &mut R, field_defs: &[pcd_rs::meta::FieldDef]) -> pcd_rs::failure::Fallible<#struct_name> {
+            fn read_chunk<R: std::io::BufRead>(reader: &mut R, field_defs: &[pcd_rs::metas::FieldDef]) -> pcd_rs::failure::Fallible<#struct_name> {
                 use pcd_rs::byteorder::{LittleEndian, ReadBytesExt};
                 let result = { #bin_read_tokens };
                 Ok(result)
             }
 
-            fn read_line<R: std::io::BufRead>(reader: &mut R, field_defs: &[pcd_rs::meta::FieldDef]) -> pcd_rs::failure::Fallible<#struct_name> {
+            fn read_line<R: std::io::BufRead>(reader: &mut R, field_defs: &[pcd_rs::metas::FieldDef]) -> pcd_rs::failure::Fallible<#struct_name> {
                 let mut line = String::new();
                 let mut tokens = {
                     let read_size = reader.read_line(&mut line)?;
@@ -433,42 +437,42 @@ fn make_rw_expr(type_ident: &Ident) -> Option<DerivedTokens> {
     let (read_spec_tokens, bin_read_tokens, text_read_tokens) =
         match type_ident.to_string().as_str() {
             "u8" => (
-                quote! { pcd_rs::meta::ValueKind::U8 },
+                quote! { pcd_rs::metas::ValueKind::U8 },
                 quote! { reader.read_u8()? },
                 quote! { token.parse::<u8>()? },
             ),
             "u16" => (
-                quote! { pcd_rs::meta::ValueKind::U16 },
+                quote! { pcd_rs::metas::ValueKind::U16 },
                 quote! { reader.read_u16::<LittleEndian>()? },
                 quote! { token.parse::<u16>()? },
             ),
             "u32" => (
-                quote! { pcd_rs::meta::ValueKind::U32 },
+                quote! { pcd_rs::metas::ValueKind::U32 },
                 quote! { reader.read_u32::<LittleEndian>()? },
                 quote! { token.parse::<u32>()? },
             ),
             "i8" => (
-                quote! { pcd_rs::meta::ValueKind::I8 },
+                quote! { pcd_rs::metas::ValueKind::I8 },
                 quote! { reader.read_i8()? },
                 quote! { token.parse::<i8>()? },
             ),
             "i16" => (
-                quote! { pcd_rs::meta::ValueKind::I16 },
+                quote! { pcd_rs::metas::ValueKind::I16 },
                 quote! { reader.read_i16::<LittleEndian>()? },
                 quote! { token.parse::<i16>()? },
             ),
             "i32" => (
-                quote! { pcd_rs::meta::ValueKind::I32 },
+                quote! { pcd_rs::metas::ValueKind::I32 },
                 quote! { reader.read_i32::<LittleEndian>()? },
                 quote! { token.parse::<i32>()? },
             ),
             "f32" => (
-                quote! { pcd_rs::meta::ValueKind::F32 },
+                quote! { pcd_rs::metas::ValueKind::F32 },
                 quote! { reader.read_f32::<LittleEndian>()? },
                 quote! { token.parse::<f32>()? },
             ),
             "f64" => (
-                quote! { pcd_rs::meta::ValueKind::F64 },
+                quote! { pcd_rs::metas::ValueKind::F64 },
                 quote! { reader.read_f64::<LittleEndian>()? },
                 quote! { token.parse::<f64>()? },
             ),

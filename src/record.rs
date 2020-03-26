@@ -1,18 +1,18 @@
-//! The module defines [PCDRecordRead](crate::record::PCDRecordRead) and
-//! [PCDRecordWrite](crate::record::PCDRecordWrite) traits. Both are analogous to
+//! The module defines [PcdDeserialize](crate::record::PcdDeserialize) and
+//! [PcdSerialize](crate::record::PcdSerialize) traits. Both are analogous to
 //! points in PCD data.
 //!
 //! Any object scanned by readers or written by writers must implement
-//! [PCDRecordRead](crate::record::PCDRecordRead) or [PCDRecordWrite](crate::record::PCDRecordWrite)
+//! [PcdDeserialize](crate::record::PcdDeserialize) or [PcdSerialize](crate::record::PcdSerialize)
 //! respectively.
 //!
 //! These traits are not intended to implemented manually.
 //! Please use derive macro instead. For example,
 //!
 //! ```rust
-//! use pcd_rs::{PCDRecordRead, PCDRecordWrite};
+//! use pcd_rs::{PcdDeserialize, PcdSerialize};
 //!
-//! #[derive(PCDRecordRead, PCDRecordWrite)]
+//! #[derive(PcdDeserialize, PcdSerialize)]
 //! pub struct TimestampedPoint {
 //!     x: f32,
 //!     y: f32,
@@ -23,10 +23,10 @@
 //!
 //! The derive macro accepts normal structs and tuple structs, but does not accept unit structs.
 //!
-//! [PCDRecordRead](crate::record::PCDRecordRead) allows fields with either primitive type,
+//! [PcdDeserialize](crate::record::PcdDeserialize) allows fields with either primitive type,
 //! array of primitive type or [Vec](<std::vec::Vec>) of primitive type.
 //!
-//! [PCDRecordWrite](crate::record::PCDRecordWrite) allows fields with either primitive type or
+//! [PcdSerialize](crate::record::PcdSerialize) allows fields with either primitive type or
 //! array of primitive type. The [Vec](<std::vec::Vec>) is ruled out since the length
 //! is not determined in compile-time.
 //!
@@ -35,9 +35,9 @@
 //! with attributes. The name check are automatically disabled for tuple structs.
 //!
 //! ```rust
-//! use pcd_rs::{PCDRecordRead};
+//! use pcd_rs::{PcdDeserialize};
 //!
-//! #[derive(PCDRecordRead)]
+//! #[derive(PcdDeserialize)]
 //! pub struct TimestampedPoint {
 //!     x: f32,
 //!     y: f32,
@@ -51,49 +51,46 @@
 
 use crate::{
     error::PCDError,
-    meta::{FieldDef, ValueKind},
+    metas::{FieldDef, ValueKind},
 };
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use failure::Fallible;
 use std::io::prelude::*;
 
-/// Represents if a record type is typed or not.
-pub trait SchemaKind {}
-
-/// Indicates the record schema is known in compile-time.
-pub struct TypedSchema;
-
-impl SchemaKind for TypedSchema {}
-
-/// Indicates the record schema is only-known in run-time.
-pub struct UntypedSchema;
-
-impl SchemaKind for UntypedSchema {}
-
-/// [PCDRecordRead](crate::record::PCDRecordRead) is analogous to a _point_ returned from a reader.
+/// [PcdDeserialize](crate::record::PcdDeserialize) is analogous to a _point_ returned from a reader.
 ///
 /// The trait is not intended to be implemented from scratch. You must
-/// derive the implementation with `#[derive(PCDRecordRead)]`.
+/// derive the implementation with `#[derive(PcdDeserialize)]`.
 ///
 /// When the PCD data is in ASCII mode, the record is represented by a line of literals.
 /// Otherwise if the data is in binary mode, the record is represented by a fixed size chunk.
-pub trait PCDRecordRead: Sized {
+pub trait PcdDeserialize: Sized {
+    fn is_dynamic() -> bool;
     fn read_spec() -> Vec<(Option<String>, ValueKind, Option<usize>)>;
     fn read_chunk<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Fallible<Self>;
     fn read_line<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Fallible<Self>;
 }
 
-/// [PCDRecordWrite](crate::record::PCDRecordWrite) is analogous to a _point_ written by a writer.
+/// [PcdSerialize](crate::record::PcdSerialize) is analogous to a _point_ written by a writer.
 ///
 /// The trait is not intended to be implemented from scratch. You must
-/// derive the implementation with `#[derive(PCDRecordWrite)]`.
+/// derive the implementation with `#[derive(PcdSerialize)]`.
 ///
 /// When the PCD data is in ASCII mode, the record is represented by a line of literals.
 /// Otherwise if the data is in binary mode, the record is represented by a fixed size chunk.
-pub trait PCDRecordWrite: Sized {
+pub trait PcdSerialize: Sized {
+    fn is_dynamic() -> bool;
     fn write_spec() -> Vec<(String, ValueKind, usize)>;
-    fn write_chunk<R: Write>(&self, writer: &mut R) -> Fallible<()>;
-    fn write_line<R: Write>(&self, writer: &mut R) -> Fallible<()>;
+    fn write_chunk<R: Write + Seek>(
+        &self,
+        writer: &mut R,
+        spec: &[(String, ValueKind, usize)],
+    ) -> Fallible<()>;
+    fn write_line<R: Write + Seek>(
+        &self,
+        writer: &mut R,
+        spec: &[(String, ValueKind, usize)],
+    ) -> Fallible<()>;
 }
 
 // Runtime record types
@@ -146,9 +143,9 @@ impl Field {
 
 /// Represents an untyped _point_ in PCD data.
 #[derive(Debug, Clone, PartialEq)]
-pub struct UntypedRecord(pub Vec<Field>);
+pub struct DynRecord(pub Vec<Field>);
 
-impl UntypedRecord {
+impl DynRecord {
     pub fn is_schema_consistent(&self, schema: &[(String, ValueKind, usize)]) -> bool {
         if self.0.len() != schema.len() {
             return false;
@@ -176,8 +173,18 @@ impl UntypedRecord {
 
         true
     }
+}
 
-    pub fn write_chunk<Writer>(
+impl PcdSerialize for DynRecord {
+    fn is_dynamic() -> bool {
+        true
+    }
+
+    fn write_spec() -> Vec<(String, ValueKind, usize)> {
+        unreachable!();
+    }
+
+    fn write_chunk<Writer>(
         &self,
         writer: &mut Writer,
         spec: &[(String, ValueKind, usize)],
@@ -247,7 +254,7 @@ impl UntypedRecord {
         Ok(())
     }
 
-    pub fn write_line<Writer>(
+    fn write_line<Writer>(
         &self,
         writer: &mut Writer,
         spec: &[(String, ValueKind, usize)],
@@ -304,8 +311,18 @@ impl UntypedRecord {
 
         Ok(())
     }
+}
 
-    pub fn read_chunk<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Fallible<Self> {
+impl PcdDeserialize for DynRecord {
+    fn is_dynamic() -> bool {
+        true
+    }
+
+    fn read_spec() -> Vec<(Option<String>, ValueKind, Option<usize>)> {
+        unreachable!();
+    }
+
+    fn read_chunk<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Fallible<Self> {
         let fields = field_defs
             .iter()
             .map(|def| {
@@ -375,7 +392,7 @@ impl UntypedRecord {
         Ok(Self(fields))
     }
 
-    pub fn read_line<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Fallible<Self> {
+    fn read_line<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Fallible<Self> {
         let mut line = String::new();
         reader.read_line(&mut line)?;
         let tokens = line.split_ascii_whitespace().collect::<Vec<_>>();
@@ -461,7 +478,11 @@ impl UntypedRecord {
 
 // impl for primitive types
 
-impl PCDRecordRead for u8 {
+impl PcdDeserialize for u8 {
+    fn is_dynamic() -> bool {
+        false
+    }
+
     fn read_spec() -> Vec<(Option<String>, ValueKind, Option<usize>)> {
         vec![(None, ValueKind::U8, Some(1))]
     }
@@ -478,7 +499,11 @@ impl PCDRecordRead for u8 {
     }
 }
 
-impl PCDRecordRead for i8 {
+impl PcdDeserialize for i8 {
+    fn is_dynamic() -> bool {
+        false
+    }
+
     fn read_spec() -> Vec<(Option<String>, ValueKind, Option<usize>)> {
         vec![(None, ValueKind::I8, Some(1))]
     }
@@ -497,7 +522,11 @@ impl PCDRecordRead for i8 {
 
 macro_rules! impl_primitive {
     ($ty:ty, $kind:ident, $read:ident) => {
-        impl PCDRecordRead for $ty {
+        impl PcdDeserialize for $ty {
+            fn is_dynamic() -> bool {
+                false
+            }
+
             fn read_spec() -> Vec<(Option<String>, ValueKind, Option<usize>)> {
                 vec![(None, ValueKind::$kind, Some(1))]
             }
