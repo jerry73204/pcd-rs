@@ -25,8 +25,8 @@
 //! ```
 
 use crate::{
-    error::PCDError,
-    metas::{DataKind, FieldDef, PCDMeta},
+    error::PcdError,
+    metas::{DataKind, FieldDef, PcdMeta},
     record::PcdDeserialize,
 };
 use failure::Fallible;
@@ -42,7 +42,7 @@ pub struct Reader<Record, R>
 where
     R: Read,
 {
-    meta: PCDMeta,
+    meta: PcdMeta,
     record_count: usize,
     finished: bool,
     reader: R,
@@ -54,7 +54,7 @@ where
     R: BufRead,
 {
     /// Get meta data.
-    pub fn meta(&self) -> &PCDMeta {
+    pub fn meta(&self) -> &PcdMeta {
         &self.meta
     }
 }
@@ -131,7 +131,7 @@ impl ReaderBuilder {
             let record_spec = Record::read_spec();
 
             let mismatch_error =
-                PCDError::new_schema_mismatch_error(record_spec.as_slice(), &meta.field_defs);
+                PcdError::new_schema_mismatch_error(record_spec.as_slice(), &meta.field_defs);
 
             if record_spec.len() != meta.field_defs.len() {
                 return Err(mismatch_error.into());

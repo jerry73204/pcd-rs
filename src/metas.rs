@@ -1,6 +1,6 @@
 /// The struct keep meta data of PCD file.
 #[derive(Debug)]
-pub struct PCDMeta {
+pub struct PcdMeta {
     pub version: String,
     pub width: u64,
     pub height: u64,

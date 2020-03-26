@@ -82,8 +82,8 @@ pub fn f_pcd_record_read_derive(input: DeriveInput) -> SynResult<TokenStream> {
                     let expect = field_defs.iter().fold(0, |sum, def| sum + def.count as usize);
                     let (found, _) = tokens.size_hint();
                     if expect != found {
-                        use pcd_rs::error::PCDError;
-                        let error = PCDError::new_text_token_mismatch_error(expect, found);
+                        use pcd_rs::error::PcdError;
+                        let error = PcdError::new_text_token_mismatch_error(expect, found);
                         return Err(error.into());
                     }
                 }

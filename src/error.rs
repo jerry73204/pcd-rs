@@ -4,7 +4,7 @@ use crate::metas::{FieldDef, ValueKind};
 
 /// The error returned from the crate.
 #[derive(Debug, Fail)]
-pub enum PCDError {
+pub enum PcdError {
     #[fail(display = "Failed to parse PCD format at line {}: {}", line, desc)]
     ParseError { line: usize, desc: String },
     #[fail(
@@ -33,9 +33,9 @@ pub enum PCDError {
     InvalidArgumentError { desc: String },
 }
 
-impl PCDError {
-    pub fn new_parse_error(line: usize, desc: &str) -> PCDError {
-        PCDError::ParseError {
+impl PcdError {
+    pub fn new_parse_error(line: usize, desc: &str) -> PcdError {
+        PcdError::ParseError {
             line,
             desc: desc.to_owned(),
         }
@@ -44,7 +44,7 @@ impl PCDError {
     pub fn new_schema_mismatch_error(
         record_fields: &[(Option<String>, ValueKind, Option<usize>)],
         file_fields: &[FieldDef],
-    ) -> PCDError {
+    ) -> PcdError {
         let expect = record_fields.to_vec();
         let found = file_fields
             .iter()
@@ -56,27 +56,27 @@ impl PCDError {
                 )
             })
             .collect::<Vec<_>>();
-        PCDError::SchemaMismatchError { expect, found }
+        PcdError::SchemaMismatchError { expect, found }
     }
 
     pub fn new_field_size_mismatch_error(
         field_name: &str,
         expect: usize,
         found: usize,
-    ) -> PCDError {
-        PCDError::FieldSizeMismatchError {
+    ) -> PcdError {
+        PcdError::FieldSizeMismatchError {
             field_name: field_name.to_owned(),
             expect,
             found,
         }
     }
 
-    pub fn new_text_token_mismatch_error(expect: usize, found: usize) -> PCDError {
-        PCDError::TextTokenMismatchError { expect, found }
+    pub fn new_text_token_mismatch_error(expect: usize, found: usize) -> PcdError {
+        PcdError::TextTokenMismatchError { expect, found }
     }
 
-    pub fn new_invalid_argument_error(desc: &str) -> PCDError {
-        PCDError::InvalidArgumentError {
+    pub fn new_invalid_argument_error(desc: &str) -> PcdError {
+        PcdError::InvalidArgumentError {
             desc: desc.to_owned(),
         }
     }

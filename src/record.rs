@@ -50,7 +50,7 @@
 //! ```
 
 use crate::{
-    error::PCDError,
+    error::PcdError,
     metas::{FieldDef, ValueKind},
 };
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
@@ -399,7 +399,7 @@ impl PcdDeserialize for DynRecord {
 
         {
             let expect = field_defs.iter().map(|def| def.count as usize).sum();
-            let error = PCDError::new_text_token_mismatch_error(expect, tokens.len());
+            let error = PcdError::new_text_token_mismatch_error(expect, tokens.len());
             if tokens.len() != expect {
                 return Err(error.into());
             }
