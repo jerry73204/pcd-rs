@@ -1,11 +1,6 @@
 //! Read and write PCD file format.
 //!
-//! `pcd-rs` allows you to read or write PCD point cloud data from either
-//! a path or a binary buffer.
-//!
-//! - [seq_reader](crate::seq_reader) for reading PCD data
-//! - [seq_writer](crate::seq_writer) for writing PCD data
-//! - [record](crate::record) for building custom _point_ type
+//! This crate allows you to read and write PCD point cloud.
 
 #[macro_use]
 pub extern crate failure;

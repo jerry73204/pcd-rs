@@ -1,4 +1,6 @@
-//! [Reader](crate::seq_reader::Reader) lets you load points sequentially with
+//! Types for reading PCD data.
+//!
+//! [Reader](crate::reader::Reader) lets you load points sequentially with
 //! [Iterator](std::iter::Iterator) interface. The points are stored in
 //! types implementing [PcdDeserialize](crate::record::PcdDeserialize) trait.
 //! See [record](crate::record) moduel doc to implement your own point type.
@@ -97,7 +99,7 @@ where
     }
 }
 
-/// A builder type that builds [Reader](crate::seq_reader::Reader).
+/// A builder type that builds [Reader](crate::reader::Reader).
 pub struct ReaderBuilder;
 
 impl ReaderBuilder {

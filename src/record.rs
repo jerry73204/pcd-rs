@@ -1,6 +1,4 @@
-//! The module defines [PcdDeserialize](crate::record::PcdDeserialize) and
-//! [PcdSerialize](crate::record::PcdSerialize) traits. Both are analogous to
-//! points in PCD data.
+//! Defines serializing and deserializing traits and common record types.
 //!
 //! Any object scanned by readers or written by writers must implement
 //! [PcdDeserialize](crate::record::PcdDeserialize) or [PcdSerialize](crate::record::PcdSerialize)

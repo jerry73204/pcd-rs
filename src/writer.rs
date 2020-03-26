@@ -1,4 +1,6 @@
-//! [Writer](crate::seq_writer::Writer) lets you write points sequentially to
+//! Types for writing PCD data.
+//!
+//! [Writer](crate::writer::Writer) lets you write points sequentially to
 //! PCD file or writer given by user. The written point type must implement
 //! [PcdSerialize](crate::record::PcdSerialize) trait.
 //! See [record](crate::record) moduel doc to implement your own point type.
@@ -47,7 +49,7 @@ use std::{
     path::Path,
 };
 
-/// A builder type that builds [Writer](crate::seq_writer::Writer).
+/// A builder type that builds [Writer](crate::writer::Writer).
 pub struct WriterBuilder {
     width: u64,
     height: u64,
@@ -139,7 +141,7 @@ impl WriterBuilder {
         Ok((points_arg_begin, points_arg_width))
     }
 
-    /// Create new [WriterBuilder](crate::seq_writer::WriterBuilder) that
+    /// Create new [WriterBuilder](crate::writer::WriterBuilder) that
     /// stores header data.
     pub fn new(
         width: u64,
@@ -159,7 +161,7 @@ impl WriterBuilder {
         Ok(builder)
     }
 
-    /// Create new [WriterBuilder](crate::seq_writer::WriterBuilder) that
+    /// Create new [WriterBuilder](crate::writer::WriterBuilder) that
     /// stores header data.
     pub fn schema<Name, Spec>(mut self, spec: Spec) -> Fallible<Self>
     where
@@ -198,7 +200,7 @@ impl WriterBuilder {
         Ok(self)
     }
 
-    /// Builds new [Writer](crate::seq_writer::Writer) object from a writer.
+    /// Builds new [Writer](crate::writer::Writer) object from a writer.
     /// The writer must implement both [Write](std::io::Write) and [Write](std::io::Seek)
     /// traits.
     pub fn from_writer<W: Write + Seek, Record: PcdSerialize>(
@@ -216,7 +218,7 @@ impl WriterBuilder {
         Ok(seq_writer)
     }
 
-    /// Builds new [Writer](crate::seq_writer::Writer) by creating a new file.
+    /// Builds new [Writer](crate::writer::Writer) by creating a new file.
     pub fn create<P: AsRef<Path>, Record: PcdSerialize>(
         self,
         path: P,

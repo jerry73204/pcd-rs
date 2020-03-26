@@ -1,4 +1,4 @@
-//! The module defines most error types used by this crate.
+//! The module defines most error type used by this crate.
 
 use crate::metas::{FieldDef, ValueKind};
 

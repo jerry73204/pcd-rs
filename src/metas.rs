@@ -1,3 +1,5 @@
+//! Types for PCD metadata.
+
 /// The struct keep meta data of PCD file.
 #[derive(Debug)]
 pub struct PcdMeta {
