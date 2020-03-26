@@ -13,6 +13,7 @@ pub extern crate byteorder;
 
 pub mod error;
 pub mod metas;
+pub mod prelude;
 pub mod reader;
 pub mod record;
 mod utils;
