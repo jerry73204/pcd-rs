@@ -15,4 +15,4 @@ license-file = "LICENSE"
 byteorder = "~1"
 failure = "~0"
 regex = "~1"
-pcd-rs-derive = { version = "0.2.0", path = "pcd-rs-derive" }
+pcd-rs-derive = { version = "0.3.0", path = "pcd-rs-derive" }
