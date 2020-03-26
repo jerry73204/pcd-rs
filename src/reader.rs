@@ -5,11 +5,7 @@
 //!
 //! ```rust
 //! use failure::Fallible;
-//! use pcd_rs::{
-//!     prelude::*,
-//!     seq_reader::ReaderBuilder,
-//!     PcdDeserialize,
-//! };
+//! use pcd_rs::{PcdDeserialize, Reader, ReaderBuilder};
 //! use std::path::Path;
 //!
 //! #[derive(PcdDeserialize)]
@@ -21,7 +17,7 @@
 //! }
 //!
 //! fn main() -> Fallible<()> {
-//!     let reader = ReaderBuilder::<Point, _>::open("test_files/ascii.pcd")?;
+//!     let reader: Reader<Point, _> = ReaderBuilder::from_path("test_files/ascii.pcd")?;
 //!     let points = reader.collect::<Fallible<Vec<_>>>()?;
 //!     assert_eq!(points.len(), 213);
 //!     Ok(())

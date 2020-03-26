@@ -5,12 +5,7 @@
 //!
 //! ```rust
 //! use failure::Fallible;
-//! use pcd_rs::{
-//!     prelude::*,
-//!     meta::DataKind,
-//!     seq_writer::WriterBuilder,
-//!     PcdSerialize,
-//! };
+//! use pcd_rs::{DataKind, PcdSerialize, Writer, WriterBuilder};
 //! use std::path::Path;
 //!
 //! #[derive(PcdSerialize)]
@@ -23,8 +18,8 @@
 //! fn main() -> Fallible<()> {
 //!     let viewpoint = Default::default();
 //!     let kind = DataKind::ASCII;
-//!     let mut writer = WriterBuilder::<Point, _>::new(300, 1, viewpoint, kind)?
-//!         .create("test_files/dump.pcd")?;
+//!     let mut writer: Writer<Point, _> =
+//!         WriterBuilder::new(300, 1, viewpoint, kind)?.create("test_files/dump.pcd")?;
 //!
 //!     let point = Point {
 //!         x: 3.14159,

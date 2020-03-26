@@ -35,7 +35,7 @@
 //! with attributes. The name check are automatically disabled for tuple structs.
 //!
 //! ```rust
-//! use pcd_rs::{PcdDeserialize};
+//! use pcd_rs::PcdDeserialize;
 //!
 //! #[derive(PcdDeserialize)]
 //! pub struct TimestampedPoint {

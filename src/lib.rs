@@ -23,5 +23,5 @@ pub use error::PCDError;
 pub use metas::{DataKind, FieldDef, PCDMeta, TypeKind, ValueKind, ViewPoint};
 pub use pcd_rs_derive::{PcdDeserialize, PcdSerialize};
 pub use reader::{Reader, ReaderBuilder};
-pub use record::{DynRecord, Field};
+pub use record::{DynRecord, Field, PcdDeserialize, PcdSerialize};
 pub use writer::{Writer, WriterBuilder};
