@@ -1,6 +1,6 @@
 [package]
 name = "pcd-rs"
-version = "0.6.1"
+version = "0.6.2"
 authors = ["jerry73204 <jerry73204@gmail.com>"]
 edition = "2018"
 description = "Working with PCD file format in Rust"
