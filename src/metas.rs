@@ -1,7 +1,9 @@
 //! Types for PCD metadata.
 
+use std::borrow::Borrow;
+
 /// The struct keep meta data of PCD file.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PcdMeta {
     pub version: String,
     pub width: u64,
@@ -39,14 +41,14 @@ impl Default for ViewPoint {
 }
 
 /// The enum indicates whether the point cloud data is encoded in ASCII or binary.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DataKind {
     ASCII,
     Binary,
 }
 
 /// The enum specifies one of signed, unsigned integers, and floating point number type to the field.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TypeKind {
     I,
     U,
@@ -54,7 +56,7 @@ pub enum TypeKind {
 }
 
 /// The enum specifies the exact type for each PCD field.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ValueKind {
     U8,
     U16,
