@@ -69,9 +69,32 @@ pub enum ValueKind {
 }
 
 /// Define the properties of a PCD field.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FieldDef {
     pub name: String,
     pub kind: ValueKind,
     pub count: u64,
+}
+
+impl<Name> From<&(Name, ValueKind, u64)> for FieldDef
+where
+    Name: Borrow<str>,
+{
+    fn from(from: &(Name, ValueKind, u64)) -> Self {
+        let (name, kind, count) = from;
+        Self {
+            name: name.borrow().to_string(),
+            kind: *kind,
+            count: *count,
+        }
+    }
+}
+
+impl<Name> From<(Name, ValueKind, u64)> for FieldDef
+where
+    Name: Borrow<str>,
+{
+    fn from(from: (Name, ValueKind, u64)) -> Self {
+        (&from).into()
+    }
 }

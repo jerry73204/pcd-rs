@@ -36,12 +36,11 @@
 //! ```
 
 use crate::{
-    metas::{DataKind, ValueKind, ViewPoint},
+    metas::{DataKind, FieldDef, ValueKind, ViewPoint},
     record::PcdSerialize,
 };
 use failure::Fallible;
 use std::{
-    borrow::Borrow,
     collections::HashSet,
     fs::File,
     io::{prelude::*, BufWriter, SeekFrom},
@@ -163,15 +162,15 @@ impl WriterBuilder {
 
     /// Create new [WriterBuilder](crate::writer::WriterBuilder) that
     /// stores header data.
-    pub fn schema<Name, Spec>(mut self, spec: Spec) -> Fallible<Self>
+    pub fn schema<Schema, Field>(mut self, spec: Schema) -> Fallible<Self>
     where
-        Name: Borrow<str>,
-        Spec: Borrow<[(Name, ValueKind, usize)]>,
+        Schema: IntoIterator<Item = Field>,
+        Field: Into<FieldDef>,
     {
         let record_spec = spec
-            .borrow()
             .into_iter()
-            .map(|(name, kind, size)| (name.borrow().to_owned(), *kind, *size))
+            .map(|field_def| field_def.into())
+            .map(|FieldDef { name, kind, count }| (name, kind, count as usize))
             .collect::<Vec<(String, ValueKind, usize)>>();
 
         // Sanity check
