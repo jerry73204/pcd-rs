@@ -1,26 +1,33 @@
 # pcd-rs: Read point cloud data from **PCD** file format
 
-`pcd-rs` allows you to parse PCD point cloud data from a file or a binary buffer
+`pcd-rs` allows you to parse PCD point cloud data from a file or a binary buffer.
 
 ## Usage
 
 Add pcd-rs to your `Cargo.toml`.
 
 ```toml
-pcd_rs = "*"
+pcd_rs = "^0.6.0"
 ```
 
-Checkout [docs.rs](https://docs.rs/pcd-rs/) to see detailed usage.
+Please visit [docs.rs](https://docs.rs/pcd-rs/) to see detailed usage.
 
 ## Examples
 
-### Load PCD file into structs
+### How to run examples
+
+Example programs are available in `examples` directory.
+Pleaase run `cargo run --example` to list all available example names.
+Then, try the example by `cargo run --example EXAMPLE_NAME`.
+
+
+### Deserialize a PCD file into a type
 
 ```rust
 use failure::Fallible;
-use pcd_rs::{prelude::*, seq_reader::SeqReaderBuilder, PCDRecordRead};
+use pcd_rs::{PcdDeserialize, Reader, ReaderBuilder};
 
-#[derive(PCDRecordRead)]
+#[derive(PcdDeserialize)]
 pub struct Point {
     pub x: f32,
     pub y: f32,
@@ -29,111 +36,123 @@ pub struct Point {
 }
 
 fn main() -> Fallible<()> {
-    let reader = SeqReaderBuilder::<Point, _>::open("test_files/ascii.pcd")?;
+    let reader: Reader<Point, _> = ReaderBuilder::from_path("test_files/ascii.pcd")?;
     let points = reader.collect::<Fallible<Vec<_>>>()?;
-    assert_eq!(points.len(), 213);
+    println!("{} points found", points.len());
     Ok(())
 }
 ```
 
-### Load PCD file into untyped records
+### Deserialize a PCD file dynamically
 
 ```rust
 use failure::Fallible;
-use pcd_rs::{
-    prelude::*,
-    record::{Field, UntypedRecord},
-    seq_reader::SeqReaderBuilder,
-};
+use pcd_rs::{DynRecord, Reader, ReaderBuilder};
 
 fn main() -> Fallible<()> {
-    let reader = SeqReaderBuilder::<UntypedRecord, _>::open("test_files/ascii.pcd")?;
+    let reader: Reader<DynRecord, _> = ReaderBuilder::from_path("test_files/binary.pcd")?;
     let points = reader.collect::<Fallible<Vec<_>>>()?;
+    println!("{} points", points.len());
+    Ok(())
+}
+```
 
-    for point in points.iter() {
-        for field in point.0.iter() {
-            match field {
-                Field::I8(values) => {
-                    println!("i8 values: {:?}", values);
-                }
-                Field::U8(values) => {
-                    println!("u8 values: {:?}", values);
-                }
-                Field::F32(values) => {
-                    println!("f32 values: {:?}", values);
-                }
-                _ => {
-                    println!("other kinds of values");
-                }
-            }
-        }
+### Serialize a type to a PCD file
+
+```rust
+use failure::Fallible;
+use pcd_rs::{DataKind, PcdDeserialize, PcdSerialize, Writer, WriterBuilder};
+
+#[derive(Debug, PcdDeserialize, PcdSerialize, PartialEq)]
+pub struct Point {
+    #[pcd_rename("new_x")]
+    x: f32,
+    y: [u8; 3],
+    z: i32,
+}
+
+fn main() -> Fallible<()> {
+    // output path
+    let path = "test_files/dump_ascii_static.pcd";
+
+    // point data
+    let dump_points = vec![
+        Point {
+            x: 3.14159,
+            y: [2, 1, 7],
+            z: -5,
+        },
+        Point {
+            x: -0.0,
+            y: [254, 6, 98],
+            z: 7,
+        },
+        Point {
+            x: 5.6,
+            y: [4, 0, 111],
+            z: -100000,
+        },
+    ];
+
+    // serialize points
+    let mut writer: Writer<Point, _> =
+        WriterBuilder::new(300, 1, Default::default(), DataKind::ASCII)?.create(path)?;
+
+    for point in dump_points.iter() {
+        writer.push(&point)?;
     }
 
-    Ok(())
-}
-```
-
-### Write struct to PCD file
-
-```rust
-use failure::Fallible;
-use pcd_rs::{meta::DataKind, prelude::*, seq_writer::SeqWriterBuilder, PCDRecordWrite};
-
-#[derive(PCDRecordWrite)]
-pub struct Point {
-    x: f32,
-    y: f32,
-    z: f32,
-}
-
-fn main() -> Fallible<()> {
-    let viewpoint = Default::default();
-    let kind = DataKind::ASCII;
-    let mut writer = SeqWriterBuilder::<Point, _>::new(300, 1, viewpoint, kind)?
-        .create("test_files/dump.pcd")?;
-
-    let point = Point {
-        x: 3.14159,
-        y: 2.71828,
-        z: -5.0,
-    };
-
-    writer.push(&point)?;
     writer.finish()?;
 
     Ok(())
 }
 ```
 
-### Write untyped record to PCD file
+### Serialize points to a PCD file with dynamic schema
 
 ```rust
 use failure::Fallible;
-use pcd_rs::{
-    meta::{DataKind, ValueKind},
-    prelude::*,
-    record::{Field, UntypedRecord},
-    seq_writer::SeqWriterBuilder,
-};
+use pcd_rs::{DataKind, DynRecord, Field, ValueKind, Writer, WriterBuilder};
 
 fn main() -> Fallible<()> {
-    let viewpoint = Default::default();
-    let kind = DataKind::ASCII;
+    // output path
+    let path = "test_files/dump_ascii_untyped.pcd";
+
+    // point data
+    let dump_points = vec![
+        DynRecord(vec![
+            Field::F32(vec![3.14159]),
+            Field::U8(vec![2, 1, 7]),
+            Field::I32(vec![-5]),
+        ]),
+        DynRecord(vec![
+            Field::F32(vec![-0.0]),
+            Field::U8(vec![254, 6, 98]),
+            Field::I32(vec![7]),
+        ]),
+        DynRecord(vec![
+            Field::F32(vec![5.6]),
+            Field::U8(vec![4, 0, 111]),
+            Field::I32(vec![-100000]),
+        ]),
+    ];
+
+    // serialize points
     let schema = vec![
         ("x", ValueKind::F32, 1),
-        ("y", ValueKind::F32, 1),
-        ("z", ValueKind::F32, 1),
+        ("y", ValueKind::U8, 3),
+        ("z", ValueKind::I32, 1),
     ];
-    let mut writer = SeqWriterBuilder::<UntypedRecord, _>::new(300, 1, viewpoint, kind, schema)?
-        .create("test_files/dump.pcd")?;
 
-    let point = UntypedRecord(vec![
-        Field::F32(vec![3.14159]),
-        Field::F32(vec![2.71828]),
-        Field::F32(vec![-5.0]),
-    ]);
+    let mut writer: Writer<DynRecord, _> =
+        WriterBuilder::new(300, 1, Default::default(), DataKind::ASCII)?
+            .schema(schema)?
+            .create(path)?;
 
-    writer.push(&point)?;
+    for point in dump_points.iter() {
+        writer.push(&point)?;
+    }
+
     writer.finish()?;
 
     Ok(())
@@ -142,4 +161,4 @@ fn main() -> Fallible<()> {
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) license
