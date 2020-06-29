@@ -1,4 +1,4 @@
-use failure::Fallible;
+use anyhow::Result;
 use pcd_rs::{DataKind, PcdDeserialize, PcdSerialize, Writer, WriterBuilder};
 
 #[derive(Debug, PcdDeserialize, PcdSerialize, PartialEq)]
@@ -9,7 +9,7 @@ pub struct Point {
     z: i32,
 }
 
-fn main() -> Fallible<()> {
+fn main() -> Result<()> {
     // output path
     let path = "test_files/dump_ascii_static.pcd";
 

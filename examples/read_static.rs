@@ -1,4 +1,4 @@
-use failure::Fallible;
+use anyhow::Result;
 use pcd_rs::{PcdDeserialize, Reader, ReaderBuilder};
 
 #[derive(PcdDeserialize)]
@@ -9,9 +9,9 @@ pub struct Point {
     pub rgb: f32,
 }
 
-fn main() -> Fallible<()> {
+fn main() -> Result<()> {
     let reader: Reader<Point, _> = ReaderBuilder::from_path("test_files/ascii.pcd")?;
-    let points = reader.collect::<Fallible<Vec<_>>>()?;
+    let points = reader.collect::<Result<Vec<_>>>()?;
     println!("{} points found", points.len());
     Ok(())
 }

@@ -1,7 +1,7 @@
-use failure::Fallible;
+use anyhow::Result;
 use pcd_rs::{DataKind, DynRecord, Field, ValueKind, Writer, WriterBuilder};
 
-fn main() -> Fallible<()> {
+fn main() -> Result<()> {
     // output path
     let path = "test_files/dump_ascii_untyped.pcd";
 
