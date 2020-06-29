@@ -2,8 +2,7 @@
 //!
 //! This crate allows you to read and write PCD point cloud.
 
-#[macro_use]
-pub extern crate failure;
+pub extern crate anyhow;
 pub extern crate byteorder;
 
 pub mod error;

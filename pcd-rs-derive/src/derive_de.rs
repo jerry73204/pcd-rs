@@ -64,13 +64,13 @@ pub fn f_pcd_record_read_derive(input: DeriveInput) -> SynResult<TokenStream> {
                 #read_spec_tokens
             }
 
-            fn read_chunk<R: std::io::BufRead>(reader: &mut R, field_defs: &[::pcd_rs::metas::FieldDef]) -> ::pcd_rs::failure::Fallible<#struct_name> {
+            fn read_chunk<R: std::io::BufRead>(reader: &mut R, field_defs: &[::pcd_rs::metas::FieldDef]) -> ::pcd_rs::anyhow::Result<#struct_name> {
                 use ::pcd_rs::byteorder::{LittleEndian, ReadBytesExt};
                 let result = { #bin_read_tokens };
                 Ok(result)
             }
 
-            fn read_line<R: std::io::BufRead>(reader: &mut R, field_defs: &[::pcd_rs::metas::FieldDef]) -> ::pcd_rs::failure::Fallible<#struct_name> {
+            fn read_line<R: std::io::BufRead>(reader: &mut R, field_defs: &[::pcd_rs::metas::FieldDef]) -> ::pcd_rs::anyhow::Result<#struct_name> {
                 let mut line = String::new();
                 let mut tokens = {
                     let read_size = reader.read_line(&mut line)?;
@@ -407,7 +407,7 @@ fn derive_vec_field(
                     let value = { #bin_read };
                     Ok(value)
                 })
-                .collect::<::pcd_rs::failure::Fallible<Vec<_>>>()?
+                .collect::<::pcd_rs::anyhow::Result<Vec<_>>>()?
         };
     };
     let text_read_tokens = quote! {
@@ -420,7 +420,7 @@ fn derive_vec_field(
                     let value = { #text_read };
                     Ok(value)
                 })
-                .collect::<::pcd_rs::failure::Fallible<Vec<_>>>()?
+                .collect::<::pcd_rs::anyhow::Result<Vec<_>>>()?
         };
     };
 

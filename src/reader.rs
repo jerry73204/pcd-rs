@@ -6,7 +6,7 @@
 //! See [record](crate::record) moduel doc to implement your own point type.
 //!
 //! ```rust
-//! use failure::Fallible;
+//! use anyhow::Result;
 //! use pcd_rs::{PcdDeserialize, Reader, ReaderBuilder};
 //! use std::path::Path;
 //!
@@ -18,9 +18,9 @@
 //!     rgb: f32,
 //! }
 //!
-//! fn main() -> Fallible<()> {
+//! fn main() -> Result<()> {
 //!     let reader: Reader<Point, _> = ReaderBuilder::from_path("test_files/ascii.pcd")?;
-//!     let points = reader.collect::<Fallible<Vec<_>>>()?;
+//!     let points = reader.collect::<Result<Vec<_>>>()?;
 //!     assert_eq!(points.len(), 213);
 //!     Ok(())
 //! }
@@ -31,7 +31,7 @@ use crate::{
     metas::{DataKind, FieldDef, PcdMeta},
     record::PcdDeserialize,
 };
-use failure::Fallible;
+use anyhow::Result;
 use std::{
     fs::File,
     io::{prelude::*, BufReader, Cursor},
@@ -66,7 +66,7 @@ where
     R: BufRead,
     Record: PcdDeserialize,
 {
-    type Item = Fallible<Record>;
+    type Item = Result<Record>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.finished {
@@ -103,7 +103,7 @@ where
 pub struct ReaderBuilder;
 
 impl ReaderBuilder {
-    pub fn from_bytes<Record>(buf: &[u8]) -> Fallible<Reader<Record, BufReader<Cursor<&[u8]>>>>
+    pub fn from_bytes<Record>(buf: &[u8]) -> Result<Reader<Record, BufReader<Cursor<&[u8]>>>>
     where
         Record: PcdDeserialize,
     {
@@ -111,7 +111,7 @@ impl ReaderBuilder {
         Ok(Self::from_reader(reader)?)
     }
 
-    pub fn from_path<P, Record>(path: P) -> Fallible<Reader<Record, BufReader<File>>>
+    pub fn from_path<P, Record>(path: P) -> Result<Reader<Record, BufReader<File>>>
     where
         Record: PcdDeserialize,
         P: AsRef<Path>,
@@ -120,7 +120,7 @@ impl ReaderBuilder {
         Ok(Self::from_reader(file)?)
     }
 
-    pub fn from_reader<R, Record>(mut reader: R) -> Fallible<Reader<Record, R>>
+    pub fn from_reader<R, Record>(mut reader: R) -> Result<Reader<Record, R>>
     where
         Record: PcdDeserialize,
         R: BufRead,

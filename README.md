@@ -24,8 +24,8 @@ Then, try the example by `cargo run --example EXAMPLE_NAME`.
 ### Deserialize a PCD file into a type
 
 ```rust
-use failure::Fallible;
 use pcd_rs::{PcdDeserialize, Reader, ReaderBuilder};
+use anyhow::Result;
 
 #[derive(PcdDeserialize)]
 pub struct Point {
@@ -35,9 +35,9 @@ pub struct Point {
     pub rgb: f32,
 }
 
-fn main() -> Fallible<()> {
+fn main() -> Result<()> {
     let reader: Reader<Point, _> = ReaderBuilder::from_path("test_files/ascii.pcd")?;
-    let points = reader.collect::<Fallible<Vec<_>>>()?;
+    let points = reader.collect::<Result<Vec<_>>>()?;
     println!("{} points found", points.len());
     Ok(())
 }
@@ -46,12 +46,12 @@ fn main() -> Fallible<()> {
 ### Deserialize a PCD file dynamically
 
 ```rust
-use failure::Fallible;
+use anyhow::Result;
 use pcd_rs::{DynRecord, Reader, ReaderBuilder};
 
-fn main() -> Fallible<()> {
+fn main() -> Result<()> {
     let reader: Reader<DynRecord, _> = ReaderBuilder::from_path("test_files/binary.pcd")?;
-    let points = reader.collect::<Fallible<Vec<_>>>()?;
+    let points = reader.collect::<Result<Vec<_>>>()?;
     println!("{} points", points.len());
     Ok(())
 }
@@ -60,7 +60,7 @@ fn main() -> Fallible<()> {
 ### Serialize a type to a PCD file
 
 ```rust
-use failure::Fallible;
+use anyhow::Result;
 use pcd_rs::{DataKind, PcdDeserialize, PcdSerialize, Writer, WriterBuilder};
 
 #[derive(Debug, PcdDeserialize, PcdSerialize, PartialEq)]
@@ -71,7 +71,7 @@ pub struct Point {
     z: i32,
 }
 
-fn main() -> Fallible<()> {
+fn main() -> Result<()> {
     // output path
     let path = "test_files/dump_ascii_static.pcd";
 
@@ -111,10 +111,10 @@ fn main() -> Fallible<()> {
 ### Serialize points to a PCD file with dynamic schema
 
 ```rust
-use failure::Fallible;
+use anyhow::Result;
 use pcd_rs::{DataKind, DynRecord, Field, ValueKind, Writer, WriterBuilder};
 
-fn main() -> Fallible<()> {
+fn main() -> Result<()> {
     // output path
     let path = "test_files/dump_ascii_untyped.pcd";
 

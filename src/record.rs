@@ -51,8 +51,8 @@ use crate::{
     error::PcdError,
     metas::{FieldDef, ValueKind},
 };
+use anyhow::{bail, Result};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use failure::Fallible;
 use std::io::prelude::*;
 
 /// [PcdDeserialize](crate::record::PcdDeserialize) is analogous to a _point_ returned from a reader.
@@ -65,8 +65,8 @@ use std::io::prelude::*;
 pub trait PcdDeserialize: Sized {
     fn is_dynamic() -> bool;
     fn read_spec() -> Vec<(Option<String>, ValueKind, Option<usize>)>;
-    fn read_chunk<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Fallible<Self>;
-    fn read_line<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Fallible<Self>;
+    fn read_chunk<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Result<Self>;
+    fn read_line<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Result<Self>;
 }
 
 /// [PcdSerialize](crate::record::PcdSerialize) is analogous to a _point_ written by a writer.
@@ -83,12 +83,12 @@ pub trait PcdSerialize: Sized {
         &self,
         writer: &mut R,
         spec: &[(String, ValueKind, usize)],
-    ) -> Fallible<()>;
+    ) -> Result<()>;
     fn write_line<R: Write + Seek>(
         &self,
         writer: &mut R,
         spec: &[(String, ValueKind, usize)],
-    ) -> Fallible<()>;
+    ) -> Result<()>;
 }
 
 // Runtime record types
@@ -186,7 +186,7 @@ impl PcdSerialize for DynRecord {
         &self,
         writer: &mut Writer,
         spec: &[(String, ValueKind, usize)],
-    ) -> Fallible<()>
+    ) -> Result<()>
     where
         Writer: Write + Seek,
     {
@@ -202,49 +202,49 @@ impl PcdSerialize for DynRecord {
                     values
                         .iter()
                         .map(|val| Ok(writer.write_i8(*val)?))
-                        .collect::<Fallible<Vec<_>>>()?;
+                        .collect::<Result<Vec<_>>>()?;
                 }
                 F::I16(values) => {
                     values
                         .iter()
                         .map(|val| Ok(writer.write_i16::<LittleEndian>(*val)?))
-                        .collect::<Fallible<Vec<_>>>()?;
+                        .collect::<Result<Vec<_>>>()?;
                 }
                 F::I32(values) => {
                     values
                         .iter()
                         .map(|val| Ok(writer.write_i32::<LittleEndian>(*val)?))
-                        .collect::<Fallible<Vec<_>>>()?;
+                        .collect::<Result<Vec<_>>>()?;
                 }
                 F::U8(values) => {
                     values
                         .iter()
                         .map(|val| Ok(writer.write_u8(*val)?))
-                        .collect::<Fallible<Vec<_>>>()?;
+                        .collect::<Result<Vec<_>>>()?;
                 }
                 F::U16(values) => {
                     values
                         .iter()
                         .map(|val| Ok(writer.write_u16::<LittleEndian>(*val)?))
-                        .collect::<Fallible<Vec<_>>>()?;
+                        .collect::<Result<Vec<_>>>()?;
                 }
                 F::U32(values) => {
                     values
                         .iter()
                         .map(|val| Ok(writer.write_u32::<LittleEndian>(*val)?))
-                        .collect::<Fallible<Vec<_>>>()?;
+                        .collect::<Result<Vec<_>>>()?;
                 }
                 F::F32(values) => {
                     values
                         .iter()
                         .map(|val| Ok(writer.write_f32::<LittleEndian>(*val)?))
-                        .collect::<Fallible<Vec<_>>>()?;
+                        .collect::<Result<Vec<_>>>()?;
                 }
                 F::F64(values) => {
                     values
                         .iter()
                         .map(|val| Ok(writer.write_f64::<LittleEndian>(*val)?))
-                        .collect::<Fallible<Vec<_>>>()?;
+                        .collect::<Result<Vec<_>>>()?;
                 }
             }
         }
@@ -256,7 +256,7 @@ impl PcdSerialize for DynRecord {
         &self,
         writer: &mut Writer,
         spec: &[(String, ValueKind, usize)],
-    ) -> Fallible<()>
+    ) -> Result<()>
     where
         Writer: Write + Seek,
     {
@@ -320,7 +320,7 @@ impl PcdDeserialize for DynRecord {
         unreachable!();
     }
 
-    fn read_chunk<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Fallible<Self> {
+    fn read_chunk<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Result<Self> {
         let fields = field_defs
             .iter()
             .map(|def| {
@@ -336,61 +336,61 @@ impl PcdDeserialize for DynRecord {
                     ValueKind::I8 => {
                         let values = counter
                             .map(|_| Ok(reader.read_i8()?))
-                            .collect::<Fallible<Vec<_>>>()?;
+                            .collect::<Result<Vec<_>>>()?;
                         Field::I8(values)
                     }
                     ValueKind::I16 => {
                         let values = counter
                             .map(|_| Ok(reader.read_i16::<LittleEndian>()?))
-                            .collect::<Fallible<Vec<_>>>()?;
+                            .collect::<Result<Vec<_>>>()?;
                         Field::I16(values)
                     }
                     ValueKind::I32 => {
                         let values = counter
                             .map(|_| Ok(reader.read_i32::<LittleEndian>()?))
-                            .collect::<Fallible<Vec<_>>>()?;
+                            .collect::<Result<Vec<_>>>()?;
                         Field::I32(values)
                     }
                     ValueKind::U8 => {
                         let values = counter
                             .map(|_| Ok(reader.read_u8()?))
-                            .collect::<Fallible<Vec<_>>>()?;
+                            .collect::<Result<Vec<_>>>()?;
                         Field::U8(values)
                     }
                     ValueKind::U16 => {
                         let values = counter
                             .map(|_| Ok(reader.read_u16::<LittleEndian>()?))
-                            .collect::<Fallible<Vec<_>>>()?;
+                            .collect::<Result<Vec<_>>>()?;
                         Field::U16(values)
                     }
                     ValueKind::U32 => {
                         let values = counter
                             .map(|_| Ok(reader.read_u32::<LittleEndian>()?))
-                            .collect::<Fallible<Vec<_>>>()?;
+                            .collect::<Result<Vec<_>>>()?;
                         Field::U32(values)
                     }
                     ValueKind::F32 => {
                         let values = counter
                             .map(|_| Ok(reader.read_f32::<LittleEndian>()?))
-                            .collect::<Fallible<Vec<_>>>()?;
+                            .collect::<Result<Vec<_>>>()?;
                         Field::F32(values)
                     }
                     ValueKind::F64 => {
                         let values = counter
                             .map(|_| Ok(reader.read_f64::<LittleEndian>()?))
-                            .collect::<Fallible<Vec<_>>>()?;
+                            .collect::<Result<Vec<_>>>()?;
                         Field::F64(values)
                     }
                 };
 
                 Ok(field)
             })
-            .collect::<Fallible<Vec<_>>>()?;
+            .collect::<Result<Vec<_>>>()?;
 
         Ok(Self(fields))
     }
 
-    fn read_line<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Fallible<Self> {
+    fn read_line<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Result<Self> {
         let mut line = String::new();
         reader.read_line(&mut line)?;
         let tokens = line.split_ascii_whitespace().collect::<Vec<_>>();
@@ -419,56 +419,56 @@ impl PcdDeserialize for DynRecord {
                     ValueKind::I8 => {
                         let values = counter
                             .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
-                            .collect::<Fallible<Vec<_>>>()?;
+                            .collect::<Result<Vec<_>>>()?;
                         Field::I8(values)
                     }
                     ValueKind::I16 => {
                         let values = counter
                             .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
-                            .collect::<Fallible<Vec<_>>>()?;
+                            .collect::<Result<Vec<_>>>()?;
                         Field::I16(values)
                     }
                     ValueKind::I32 => {
                         let values = counter
                             .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
-                            .collect::<Fallible<Vec<_>>>()?;
+                            .collect::<Result<Vec<_>>>()?;
                         Field::I32(values)
                     }
                     ValueKind::U8 => {
                         let values = counter
                             .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
-                            .collect::<Fallible<Vec<_>>>()?;
+                            .collect::<Result<Vec<_>>>()?;
                         Field::U8(values)
                     }
                     ValueKind::U16 => {
                         let values = counter
                             .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
-                            .collect::<Fallible<Vec<_>>>()?;
+                            .collect::<Result<Vec<_>>>()?;
                         Field::U16(values)
                     }
                     ValueKind::U32 => {
                         let values = counter
                             .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
-                            .collect::<Fallible<Vec<_>>>()?;
+                            .collect::<Result<Vec<_>>>()?;
                         Field::U32(values)
                     }
                     ValueKind::F32 => {
                         let values = counter
                             .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
-                            .collect::<Fallible<Vec<_>>>()?;
+                            .collect::<Result<Vec<_>>>()?;
                         Field::F32(values)
                     }
                     ValueKind::F64 => {
                         let values = counter
                             .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
-                            .collect::<Fallible<Vec<_>>>()?;
+                            .collect::<Result<Vec<_>>>()?;
                         Field::F64(values)
                     }
                 };
 
                 Ok(field)
             })
-            .collect::<Fallible<Vec<_>>>()?;
+            .collect::<Result<Vec<_>>>()?;
 
         Ok(Self(fields))
     }
@@ -485,12 +485,12 @@ impl PcdDeserialize for u8 {
         vec![(None, ValueKind::U8, Some(1))]
     }
 
-    fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
+    fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Result<Self> {
         let value = reader.read_u8()?;
         Ok(value)
     }
 
-    fn read_line<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
+    fn read_line<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Result<Self> {
         let mut line = String::new();
         reader.read_line(&mut line)?;
         Ok(line.parse()?)
@@ -506,12 +506,12 @@ impl PcdDeserialize for i8 {
         vec![(None, ValueKind::I8, Some(1))]
     }
 
-    fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
+    fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Result<Self> {
         let value = reader.read_i8()?;
         Ok(value)
     }
 
-    fn read_line<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
+    fn read_line<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Result<Self> {
         let mut line = String::new();
         reader.read_line(&mut line)?;
         Ok(line.parse()?)
@@ -529,12 +529,12 @@ macro_rules! impl_primitive {
                 vec![(None, ValueKind::$kind, Some(1))]
             }
 
-            fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
+            fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Result<Self> {
                 let value = reader.$read::<LittleEndian>()?;
                 Ok(value)
             }
 
-            fn read_line<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Fallible<Self> {
+            fn read_line<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Result<Self> {
                 let mut line = String::new();
                 reader.read_line(&mut line)?;
                 Ok(line.parse()?)

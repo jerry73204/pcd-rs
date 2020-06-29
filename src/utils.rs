@@ -2,11 +2,11 @@ use crate::{
     error::PcdError,
     metas::{DataKind, FieldDef, PcdMeta, TypeKind, ValueKind, ViewPoint},
 };
-use failure::Fallible;
+use anyhow::Result;
 use std::{collections::HashSet, io::prelude::*};
 
-pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Fallible<PcdMeta> {
-    let mut get_meta_line = |expect_entry: &str| -> Fallible<_> {
+pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<PcdMeta> {
+    let mut get_meta_line = |expect_entry: &str| -> Result<_> {
         loop {
             let mut line = String::new();
             let read_size = reader.read_line(&mut line)?;

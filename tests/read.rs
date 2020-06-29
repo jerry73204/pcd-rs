@@ -1,4 +1,4 @@
-use failure::Fallible;
+use anyhow::Result;
 use pcd_rs::{DynRecord, PcdDeserialize, Reader, ReaderBuilder};
 use std::path::Path;
 
@@ -21,35 +21,35 @@ pub struct PointBinary {
 }
 
 #[test]
-fn load_ascii_static() -> Fallible<()> {
+fn load_ascii_static() -> Result<()> {
     let reader: Reader<PointAscii, _> = ReaderBuilder::from_path("test_files/ascii.pcd")?;
-    let points = reader.collect::<Fallible<Vec<_>>>()?;
+    let points = reader.collect::<Result<Vec<_>>>()?;
     assert_eq!(points.len(), 213);
     Ok(())
 }
 
 #[test]
-fn load_binary_static() -> Fallible<()> {
+fn load_binary_static() -> Result<()> {
     let path = Path::new("test_files/binary.pcd");
     let reader: Reader<PointBinary, _> = ReaderBuilder::from_path(path)?;
-    let points = reader.collect::<Fallible<Vec<_>>>()?;
+    let points = reader.collect::<Result<Vec<_>>>()?;
     assert_eq!(points.len(), 28944);
     Ok(())
 }
 
 #[test]
-fn load_ascii_untyped() -> Fallible<()> {
+fn load_ascii_untyped() -> Result<()> {
     let reader: Reader<DynRecord, _> = ReaderBuilder::from_path("test_files/ascii.pcd")?;
-    let points = reader.collect::<Fallible<Vec<_>>>()?;
+    let points = reader.collect::<Result<Vec<_>>>()?;
     assert_eq!(points.len(), 213);
     Ok(())
 }
 
 #[test]
-fn load_binary_untyped() -> Fallible<()> {
+fn load_binary_untyped() -> Result<()> {
     let path = Path::new("test_files/binary.pcd");
     let reader: Reader<DynRecord, _> = ReaderBuilder::from_path(path)?;
-    let points = reader.collect::<Fallible<Vec<_>>>()?;
+    let points = reader.collect::<Result<Vec<_>>>()?;
     assert_eq!(points.len(), 28944);
     Ok(())
 }

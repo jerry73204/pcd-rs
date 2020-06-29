@@ -68,13 +68,13 @@ pub fn f_pcd_record_write_derive(input: DeriveInput) -> SynResult<TokenStream> {
                 #write_spec_tokens
             }
 
-            fn write_chunk<R: std::io::Write>(&self, writer: &mut R, _: &[(String, ::pcd_rs::metas::ValueKind, usize)]) -> ::pcd_rs::failure::Fallible<()> {
+            fn write_chunk<R: std::io::Write>(&self, writer: &mut R, _: &[(String, ::pcd_rs::metas::ValueKind, usize)]) -> ::pcd_rs::anyhow::Result<()> {
                 use ::pcd_rs::byteorder::{LittleEndian, WriteBytesExt};
                 { #bin_write_tokens };
                 Ok(())
             }
 
-            fn write_line<R: std::io::Write>(&self, writer: &mut R, _: &[(String, ::pcd_rs::metas::ValueKind, usize)]) -> ::pcd_rs::failure::Fallible<()> {
+            fn write_line<R: std::io::Write>(&self, writer: &mut R, _: &[(String, ::pcd_rs::metas::ValueKind, usize)]) -> ::pcd_rs::anyhow::Result<()> {
                 let mut tokens = Vec::<String>::new();
                 { #text_write_tokens };
                 let line = tokens.join(" ");

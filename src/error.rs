@@ -3,33 +3,26 @@
 use crate::metas::{FieldDef, ValueKind};
 
 /// The error returned from the crate.
-#[derive(Debug, Fail)]
+#[derive(Debug, thiserror::Error)]
 pub enum PcdError {
-    #[fail(display = "Failed to parse PCD format at line {}: {}", line, desc)]
+    #[error("parsing error at line {line}: {desc}")]
     ParseError { line: usize, desc: String },
-    #[fail(
-        display = "File schema and record schema mismatch. Expect {:?}, but found {:?}",
-        expect, found
-    )]
+    #[error("schema mismatch error, expect {expect:?}, but found {found:?}")]
     SchemaMismatchError {
         expect: Vec<(Option<String>, ValueKind, Option<usize>)>,
         found: Vec<(String, ValueKind, usize)>,
     },
-    #[fail(
-        display = "Expects {:?} elements in \"field\", but found {:?} elements in record",
-        expect, found
+    #[error(
+        "field size mismatch, expect {expect} elements in \"{field_name}\" field, but found {found} elements in record",
     )]
     FieldSizeMismatchError {
         field_name: String,
         expect: usize,
         found: usize,
     },
-    #[fail(
-        display = "Record has {} fields, but the line has {} tokens",
-        expect, found
-    )]
+    #[error("record has {expect} fields, but the line has {found} tokens")]
     TextTokenMismatchError { expect: usize, found: usize },
-    #[fail(display = "Invalid argument: {}", desc)]
+    #[error("Invalid argument: {desc}")]
     InvalidArgumentError { desc: String },
 }
 

@@ -6,7 +6,7 @@
 //! See [record](crate::record) moduel doc to implement your own point type.
 //!
 //! ```rust
-//! use failure::Fallible;
+//! use anyhow::Result;
 //! use pcd_rs::{DataKind, PcdSerialize, Writer, WriterBuilder};
 //! use std::path::Path;
 //!
@@ -17,7 +17,7 @@
 //!     z: f32,
 //! }
 //!
-//! fn main() -> Fallible<()> {
+//! fn main() -> Result<()> {
 //!     let viewpoint = Default::default();
 //!     let kind = DataKind::ASCII;
 //!     let mut writer: Writer<Point, _> =
@@ -39,7 +39,7 @@ use crate::{
     metas::{DataKind, FieldDef, ValueKind, ViewPoint},
     record::PcdSerialize,
 };
-use failure::Fallible;
+use anyhow::{bail, Result};
 use std::{
     collections::HashSet,
     fs::File,
@@ -58,7 +58,7 @@ pub struct WriterBuilder {
 }
 
 impl WriterBuilder {
-    fn write_meta<W>(&self, writer: &mut W) -> Fallible<(u64, usize)>
+    fn write_meta<W>(&self, writer: &mut W) -> Result<(u64, usize)>
     where
         W: Write + Seek,
     {
@@ -142,12 +142,7 @@ impl WriterBuilder {
 
     /// Create new [WriterBuilder](crate::writer::WriterBuilder) that
     /// stores header data.
-    pub fn new(
-        width: u64,
-        height: u64,
-        viewpoint: ViewPoint,
-        data_kind: DataKind,
-    ) -> Fallible<Self> {
+    pub fn new(width: u64, height: u64, viewpoint: ViewPoint, data_kind: DataKind) -> Result<Self> {
         let builder = Self {
             width,
             height,
@@ -162,7 +157,7 @@ impl WriterBuilder {
 
     /// Create new [WriterBuilder](crate::writer::WriterBuilder) that
     /// stores header data.
-    pub fn schema<Schema, Field>(mut self, spec: Schema) -> Fallible<Self>
+    pub fn schema<Schema, Field>(mut self, spec: Schema) -> Result<Self>
     where
         Schema: IntoIterator<Item = Field>,
         Field: Into<FieldDef>,
@@ -205,7 +200,7 @@ impl WriterBuilder {
     pub fn from_writer<W: Write + Seek, Record: PcdSerialize>(
         mut self,
         writer: W,
-    ) -> Fallible<Writer<Record, W>> {
+    ) -> Result<Writer<Record, W>> {
         if !Record::is_dynamic() {
             match self.record_spec {
                 Some(_) => bail!("do not call schema() for static schema"),
@@ -221,7 +216,7 @@ impl WriterBuilder {
     pub fn create<P: AsRef<Path>, Record: PcdSerialize>(
         self,
         path: P,
-    ) -> Fallible<Writer<Record, BufWriter<File>>> {
+    ) -> Result<Writer<Record, BufWriter<File>>> {
         let writer = BufWriter::new(File::create(path.as_ref())?);
         let seq_writer = self.from_writer(writer)?;
         Ok(seq_writer)
@@ -248,7 +243,7 @@ where
     Record: PcdSerialize,
     W: Write + Seek,
 {
-    fn new(builder: WriterBuilder, mut writer: W) -> Fallible<Self> {
+    fn new(builder: WriterBuilder, mut writer: W) -> Result<Self> {
         let (points_arg_begin, points_arg_width) = builder.write_meta(&mut writer)?;
 
         let WriterBuilder {
@@ -274,7 +269,7 @@ where
     ///
     /// The method consumes the writer must be called once when finished.
     /// Otherwise it will panic when it drops.
-    pub fn finish(mut self) -> Fallible<()> {
+    pub fn finish(mut self) -> Result<()> {
         self.writer.seek(SeekFrom::Start(self.points_arg_begin))?;
         write!(
             self.writer,
@@ -287,7 +282,7 @@ where
     }
 
     /// Writes a new point to PCD data.
-    pub fn push(&mut self, record: &Record) -> Fallible<()> {
+    pub fn push(&mut self, record: &Record) -> Result<()> {
         match self.data_kind {
             DataKind::Binary => record.write_chunk(&mut self.writer, &self.record_spec)?,
             DataKind::ASCII => record.write_line(&mut self.writer, &self.record_spec)?,

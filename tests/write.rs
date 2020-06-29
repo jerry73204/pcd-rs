@@ -1,4 +1,4 @@
-use failure::Fallible;
+use anyhow::Result;
 use pcd_rs::{
     DataKind, DynRecord, Field, PcdDeserialize, PcdSerialize, Reader, ReaderBuilder, ValueKind,
     Writer, WriterBuilder,
@@ -13,7 +13,7 @@ pub struct Point {
 }
 
 #[test]
-fn write_ascii_static() -> Fallible<()> {
+fn write_ascii_static() -> Result<()> {
     let path = "test_files/dump_ascii_static.pcd";
     let dump_points = vec![
         Point {
@@ -43,7 +43,7 @@ fn write_ascii_static() -> Fallible<()> {
     writer.finish()?;
 
     let reader: Reader<Point, _> = ReaderBuilder::from_path(path)?;
-    let load_points = reader.collect::<Fallible<Vec<_>>>()?;
+    let load_points = reader.collect::<Result<Vec<_>>>()?;
 
     assert_eq!(dump_points, load_points);
     std::fs::remove_file(path)?;
@@ -52,7 +52,7 @@ fn write_ascii_static() -> Fallible<()> {
 }
 
 #[test]
-fn write_binary_static() -> Fallible<()> {
+fn write_binary_static() -> Result<()> {
     let path = "test_files/dump_binary_static.pcd";
 
     let dump_points = vec![
@@ -83,7 +83,7 @@ fn write_binary_static() -> Fallible<()> {
     writer.finish()?;
 
     let reader: Reader<Point, _> = ReaderBuilder::from_path(path)?;
-    let load_points = reader.collect::<Fallible<Vec<_>>>()?;
+    let load_points = reader.collect::<Result<Vec<_>>>()?;
 
     assert_eq!(dump_points, load_points);
     std::fs::remove_file(path)?;
@@ -92,7 +92,7 @@ fn write_binary_static() -> Fallible<()> {
 }
 
 #[test]
-fn write_ascii_untyped() -> Fallible<()> {
+fn write_ascii_untyped() -> Result<()> {
     let path = "test_files/dump_ascii_untyped.pcd";
     let dump_points = vec![
         DynRecord(vec![
@@ -130,7 +130,7 @@ fn write_ascii_untyped() -> Fallible<()> {
     writer.finish()?;
 
     let reader: Reader<DynRecord, _> = ReaderBuilder::from_path(path)?;
-    let load_points = reader.collect::<Fallible<Vec<_>>>()?;
+    let load_points = reader.collect::<Result<Vec<_>>>()?;
 
     assert_eq!(dump_points, load_points);
     std::fs::remove_file(path)?;
@@ -139,7 +139,7 @@ fn write_ascii_untyped() -> Fallible<()> {
 }
 
 #[test]
-fn write_binary_untyped() -> Fallible<()> {
+fn write_binary_untyped() -> Result<()> {
     let path = "test_files/dump_binary_untyped.pcd";
 
     let dump_points = vec![
@@ -178,7 +178,7 @@ fn write_binary_untyped() -> Fallible<()> {
     writer.finish()?;
 
     let reader: Reader<DynRecord, _> = ReaderBuilder::from_path(path)?;
-    let load_points = reader.collect::<Fallible<Vec<_>>>()?;
+    let load_points = reader.collect::<Result<Vec<_>>>()?;
 
     assert_eq!(dump_points, load_points);
     std::fs::remove_file(path)?;
