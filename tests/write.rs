@@ -1,3 +1,5 @@
+#![cfg(feature = "derive")]
+
 use anyhow::Result;
 use pcd_rs::{
     DataKind, DynRecord, Field, PcdDeserialize, PcdSerialize, Reader, ReaderBuilder, ValueKind,

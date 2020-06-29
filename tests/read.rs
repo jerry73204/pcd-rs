@@ -1,3 +1,5 @@
+#![cfg(feature = "derive")]
+
 use anyhow::Result;
 use pcd_rs::{DynRecord, PcdDeserialize, Reader, ReaderBuilder};
 use std::path::Path;
