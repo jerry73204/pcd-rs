@@ -116,7 +116,7 @@ impl ReaderBuilder {
         Self::build_from_reader(reader)
     }
 
-    pub fn open<P, Record>(path: P) -> Result<Reader<Record, BufReader<File>>>
+    pub fn open<Record, P>(path: P) -> Result<Reader<Record, BufReader<File>>>
     where
         Record: PcdDeserialize,
         P: AsRef<Path>,
@@ -125,7 +125,7 @@ impl ReaderBuilder {
         Self::build_from_reader(file)
     }
 
-    pub fn build_from_reader<R, Record>(mut reader: R) -> Result<Reader<Record, R>>
+    pub fn build_from_reader<Record, R>(mut reader: R) -> Result<Reader<Record, R>>
     where
         Record: PcdDeserialize,
         R: BufRead,

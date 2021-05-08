@@ -200,7 +200,7 @@ impl WriterBuilder {
     /// Builds new [Writer](crate::writer::Writer) object from a writer.
     /// The writer must implement both [Write](std::io::Write) and [Write](std::io::Seek)
     /// traits.
-    pub fn build_from_writer<W: Write + Seek, Record: PcdSerialize>(
+    pub fn build_from_writer<Record: PcdSerialize, W: Write + Seek>(
         mut self,
         writer: W,
     ) -> Result<Writer<Record, W>> {
@@ -216,10 +216,11 @@ impl WriterBuilder {
     }
 
     /// Builds new [Writer](crate::writer::Writer) by creating a new file.
-    pub fn create<P: AsRef<Path>, Record: PcdSerialize>(
-        self,
-        path: P,
-    ) -> Result<Writer<Record, BufWriter<File>>> {
+    pub fn create<Record, P>(self, path: P) -> Result<Writer<Record, BufWriter<File>>>
+    where
+        Record: PcdSerialize,
+        P: AsRef<Path>,
+    {
         let writer = BufWriter::new(File::create(path.as_ref())?);
         let seq_writer = self.build_from_writer(writer)?;
         Ok(seq_writer)
