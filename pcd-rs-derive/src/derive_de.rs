@@ -314,7 +314,7 @@ fn derive_path_field(
                 1 => {
                     // Expect Vec<_>
                     let seg = segments[0];
-                    if seg.ident.to_string() != "Vec" {
+                    if seg.ident != "Vec" {
                         return None;
                     }
 
@@ -325,9 +325,9 @@ fn derive_path_field(
                 }
                 3 => {
                     // Expect std::vec::Vec<_>
-                    if segments[0].ident.to_string() != "Vec"
-                        || segments[1].ident.to_string() != "vec"
-                        || segments[2].ident.to_string() != "Vec"
+                    if segments[0].ident != "Vec"
+                        || segments[1].ident != "vec"
+                        || segments[2].ident != "Vec"
                     {
                         return None;
                     }
@@ -347,10 +347,7 @@ fn derive_path_field(
             }
 
             let arg_ident = match &vec_args[0] {
-                GenericArgument::Type(ty) => match ty {
-                    Type::Path(path) => path.path.get_ident()?,
-                    _ => return None,
-                },
+                GenericArgument::Type(Type::Path(path)) => path.path.get_ident()?,
                 _ => return None,
             };
 
@@ -505,21 +502,21 @@ fn parse_field_attributes(attrs: &[Attribute]) -> SynResult<(Option<String>, boo
                 let attr_ident_name = attr_ident.to_string();
                 match attr_ident_name.as_str() {
                     "pcd_rename" => {
-                        if let Some(_) = name_opt {
+                        if name_opt.is_some() {
                             let error = SynError::new(attr.span(), "\"pcd_rename\" cannot be specified more than once.");
-                            return Err(error.into());
+                            return Err(error);
                         }
 
                         if is_ignored {
                             let error = SynError::new(attr.span(), "\"pcd_rename\" and \"pcd_ignore_name\" attributes cannot appear simultaneously.");
-                            return Err(error.into());
+                            return Err(error);
                         }
 
                         let format_error = SynError::new(attr.span(), "The attribute must be in form of #[pcd_rename(\"...\")].");
                         let name = match attr.parse_meta()? {
                             Meta::List(meta_list) => {
                                 if meta_list.nested.len() != 1 {
-                                    return Err(format_error.into());
+                                    return Err(format_error);
                                 }
 
                                 let nested = &meta_list.nested[0];
@@ -530,23 +527,23 @@ fn parse_field_attributes(attrs: &[Attribute]) -> SynResult<(Option<String>, boo
                                     name_regex.find(&name).ok_or(error)?;
                                     name
                                 } else {
-                                    return Err(format_error.into());
+                                    return Err(format_error);
                                 }
                             }
-                            _ => return Err(format_error.into()),
+                            _ => return Err(format_error),
                         };
 
                         Ok((Some(name), false))
                     }
                     "pcd_ignore_name" => {
-                        if let Some(_) = name_opt {
+                        if name_opt.is_some() {
                             let error = SynError::new(attr.span(), "\"pcd_rename\" and pcd_\"ignore_name\" attributes cannot appear simultaneously.");
-                            return Err(error.into());
+                            return Err(error);
                         }
 
                         if is_ignored {
                             let error = SynError::new(attr.span(), "\"pcd_ignore_name\" cannot be specified more than once.");
-                            return Err(error.into());
+                            return Err(error);
                         }
 
                         Ok((None, true))

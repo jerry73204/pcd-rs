@@ -13,7 +13,7 @@ pub enum Error {
         found: Vec<(String, ValueKind, usize)>,
     },
     #[error(
-        "field size mismatch, expect {expect} elements in \"{field_name}\" field, but found {found} elements in record",
+        r#"field size mismatch, expect {expect} elements in "{field_name}" field, but found {found} elements in record"#,
     )]
     FieldSizeMismatchError {
         field_name: String,

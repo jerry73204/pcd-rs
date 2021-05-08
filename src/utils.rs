@@ -16,7 +16,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
                 return Err(Error::new_parse_error(*line_count, "Unexpected end of file").into());
             }
 
-            let line_stripped = match line.split('#').nth(0) {
+            let line_stripped = match line.split('#').next() {
                 Some("") => continue,
                 Some(remaining) => remaining,
                 None => continue,
@@ -78,7 +78,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
         let mut name_set = HashSet::new();
         let mut field_names: Vec<String> = vec![];
 
-        for tk in tokens[1..].into_iter() {
+        for tk in tokens[1..].iter() {
             let field = tk;
             if name_set.contains(field) {
                 let desc = format!("field name {:?} is specified more than once", field);
@@ -99,7 +99,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
         }
 
         let mut sizes = vec![];
-        for tk in tokens[1..].into_iter() {
+        for tk in tokens[1..].iter() {
             let size: u64 = tk.parse()?;
             sizes.push(size);
         }
@@ -115,7 +115,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
         }
 
         let mut types = vec![];
-        for type_char in tokens[1..].into_iter() {
+        for type_char in tokens[1..].iter() {
             let type_ = match type_char.as_str() {
                 "I" => TypeKind::I,
                 "U" => TypeKind::U,
@@ -139,7 +139,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
         }
 
         let mut counts = vec![];
-        for tk in tokens[1..].into_iter() {
+        for tk in tokens[1..].iter() {
             let count: u64 = tk.parse()?;
             counts.push(count);
         }
@@ -186,7 +186,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
         let qx = tokens[5].parse()?;
         let qy = tokens[6].parse()?;
         let qz = tokens[7].parse()?;
-        let viewpoint = ViewPoint {
+        ViewPoint {
             tx,
             ty,
             tz,
@@ -194,9 +194,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
             qx,
             qy,
             qz,
-        };
-
-        viewpoint
+        }
     };
 
     let meta_points = {
@@ -220,7 +218,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
         }
 
         match tokens[1].as_str() {
-            "ascii" => DataKind::ASCII,
+            "ascii" => DataKind::Ascii,
             "binary" => DataKind::Binary,
             _ => {
                 return Err(

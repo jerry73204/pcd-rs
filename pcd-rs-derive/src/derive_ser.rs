@@ -299,22 +299,22 @@ fn parse_field_attributes(attrs: &[Attribute]) -> SynResult<Option<String>> {
 
             match attr_ident_name.as_str() {
                 "pcd_rename" => {
-                    if let Some(_) = name_opt {
+                    if name_opt.is_some() {
                         let error = SynError::new(
                             attr.span(),
-                            "\"pcd_rename\" cannot be specified more than once.",
+                            r#""pcd_rename" cannot be specified more than once."#,
                         );
-                        return Err(error.into());
+                        return Err(error);
                     }
 
                     let format_error = SynError::new(
                         attr.span(),
-                        "The attribute must be in form of #[pcd_rename(\"...\")].",
+                        r#"The attribute must be in form of #[pcd_rename("...")]."#,
                     );
                     let name = match attr.parse_meta()? {
                         Meta::List(meta_list) => {
                             if meta_list.nested.len() != 1 {
-                                return Err(format_error.into());
+                                return Err(format_error);
                             }
 
                             let nested = &meta_list.nested[0];
@@ -328,10 +328,10 @@ fn parse_field_attributes(attrs: &[Attribute]) -> SynResult<Option<String>> {
                                 name_regex.find(&name).ok_or(error)?;
                                 name
                             } else {
-                                return Err(format_error.into());
+                                return Err(format_error);
                             }
                         }
-                        _ => return Err(format_error.into()),
+                        _ => return Err(format_error),
                     };
 
                     Ok(Some(name))

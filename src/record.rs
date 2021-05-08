@@ -60,7 +60,7 @@ use std::io::prelude::*;
 /// The trait is not intended to be implemented from scratch. You must
 /// derive the implementation with `#[derive(PcdDeserialize)]`.
 ///
-/// When the PCD data is in ASCII mode, the record is represented by a line of literals.
+/// When the PCD data is in Ascii mode, the record is represented by a line of literals.
 /// Otherwise if the data is in binary mode, the record is represented by a fixed size chunk.
 pub trait PcdDeserialize: Sized {
     fn is_dynamic() -> bool;
@@ -74,7 +74,7 @@ pub trait PcdDeserialize: Sized {
 /// The trait is not intended to be implemented from scratch. You must
 /// derive the implementation with `#[derive(PcdSerialize)]`.
 ///
-/// When the PCD data is in ASCII mode, the record is represented by a line of literals.
+/// When the PCD data is in Ascii mode, the record is represented by a line of literals.
 /// Otherwise if the data is in binary mode, the record is represented by a fixed size chunk.
 pub trait PcdSerialize: Sized {
     fn is_dynamic() -> bool;
@@ -324,13 +324,9 @@ impl PcdDeserialize for DynRecord {
         let fields = field_defs
             .iter()
             .map(|def| {
-                let FieldDef {
-                    name: _,
-                    kind,
-                    count,
-                } = def;
+                let FieldDef { kind, count, .. } = *def;
 
-                let counter = (0..*count).into_iter();
+                let counter = 0..count;
 
                 let field = match kind {
                     ValueKind::I8 => {
@@ -407,13 +403,9 @@ impl PcdDeserialize for DynRecord {
         let fields = field_defs
             .iter()
             .map(|def| {
-                let FieldDef {
-                    name: _,
-                    kind,
-                    count,
-                } = def;
+                let FieldDef { kind, count, .. } = *def;
 
-                let counter = (0..*count).into_iter();
+                let counter = 0..count;
 
                 let field = match kind {
                     ValueKind::I8 => {

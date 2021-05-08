@@ -32,7 +32,7 @@ fn main() -> Result<()> {
     ];
 
     let mut writer: Writer<DynRecord, _> =
-        WriterBuilder::new(300, 1, Default::default(), DataKind::ASCII)?
+        WriterBuilder::new(300, 1, Default::default(), DataKind::Ascii)?
             .schema(schema)?
             .create(path)?;
 

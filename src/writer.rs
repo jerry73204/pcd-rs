@@ -19,7 +19,7 @@
 //!
 //! fn main() -> Result<()> {
 //!     let viewpoint = Default::default();
-//!     let kind = DataKind::ASCII;
+//!     let kind = DataKind::Ascii;
 //!     let mut writer: Writer<Point, _> =
 //!         WriterBuilder::new(300, 1, viewpoint, kind)?.create("test_files/dump.pcd")?;
 //!
@@ -134,7 +134,7 @@ impl WriterBuilder {
 
         match self.data_kind {
             DataKind::Binary => writeln!(writer, "DATA binary")?,
-            DataKind::ASCII => writeln!(writer, "DATA ascii")?,
+            DataKind::Ascii => writeln!(writer, "DATA ascii")?,
         }
 
         Ok((points_arg_begin, points_arg_width))
@@ -197,7 +197,7 @@ impl WriterBuilder {
     /// Builds new [Writer](crate::writer::Writer) object from a writer.
     /// The writer must implement both [Write](std::io::Write) and [Write](std::io::Seek)
     /// traits.
-    pub fn from_writer<W: Write + Seek, Record: PcdSerialize>(
+    pub fn build_from_writer<W: Write + Seek, Record: PcdSerialize>(
         mut self,
         writer: W,
     ) -> Result<Writer<Record, W>> {
@@ -218,7 +218,7 @@ impl WriterBuilder {
         path: P,
     ) -> Result<Writer<Record, BufWriter<File>>> {
         let writer = BufWriter::new(File::create(path.as_ref())?);
-        let seq_writer = self.from_writer(writer)?;
+        let seq_writer = self.build_from_writer(writer)?;
         Ok(seq_writer)
     }
 }
@@ -285,7 +285,7 @@ where
     pub fn push(&mut self, record: &Record) -> Result<()> {
         match self.data_kind {
             DataKind::Binary => record.write_chunk(&mut self.writer, &self.record_spec)?,
-            DataKind::ASCII => record.write_line(&mut self.writer, &self.record_spec)?,
+            DataKind::Ascii => record.write_line(&mut self.writer, &self.record_spec)?,
         }
 
         self.num_records += 1;

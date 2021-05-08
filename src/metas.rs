@@ -40,10 +40,10 @@ impl Default for ViewPoint {
     }
 }
 
-/// The enum indicates whether the point cloud data is encoded in ASCII or binary.
+/// The enum indicates whether the point cloud data is encoded in Ascii or binary.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DataKind {
-    ASCII,
+    Ascii,
     Binary,
 }
 

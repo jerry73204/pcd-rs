@@ -74,7 +74,7 @@ where
         }
 
         let record_result = match self.meta.data {
-            DataKind::ASCII => Record::read_line(&mut self.reader, &self.meta.field_defs),
+            DataKind::Ascii => Record::read_line(&mut self.reader, &self.meta.field_defs),
             DataKind::Binary => Record::read_chunk(&mut self.reader, &self.meta.field_defs),
         };
 
