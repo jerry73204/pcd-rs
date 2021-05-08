@@ -11,16 +11,14 @@ homepage = "https://github.com/jerry73204/pcd-rs"
 readme = "README.md"
 license-file = "LICENSE"
 
+[workspace]
+members = [
+    "pcd-rs-derive",
+]
+
 [dependencies]
 byteorder = "1.4.3"
 anyhow = "1.0.40"
 thiserror = "1.0.24"
 regex = "1.5.3"
-pcd-rs-derive = { version = "0.4.0", path = "pcd-rs-derive", optional = true }
-
-[features]
-derive = ["pcd-rs-derive"]
-
-[package.metadata.docs.rs]
-features = ["derive"]
-no-default-features = true
+pcd-rs-derive = { version = "0.4.0", path = "pcd-rs-derive" }
