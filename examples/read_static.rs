@@ -1,5 +1,5 @@
 use anyhow::Result;
-use pcd_rs::{PcdDeserialize, ReaderBuilder};
+use pcd_rs::{PcdDeserialize, Reader};
 
 #[derive(PcdDeserialize)]
 pub struct Point {
@@ -10,8 +10,8 @@ pub struct Point {
 }
 
 pub fn main() -> Result<()> {
-    let reader = ReaderBuilder::open::<Point, _>("test_files/ascii.pcd")?;
-    let points: Result<Vec<_>> = reader.collect();
+    let reader = Reader::open("test_files/ascii.pcd")?;
+    let points: Result<Vec<Point>> = reader.collect();
     println!("{} points found", points?.len());
     Ok(())
 }

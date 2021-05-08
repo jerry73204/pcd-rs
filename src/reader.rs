@@ -7,7 +7,7 @@
 //!
 //! ```rust
 //! use anyhow::Result;
-//! use pcd_rs::{PcdDeserialize, Reader, ReaderBuilder};
+//! use pcd_rs::{PcdDeserialize, Reader};
 //! use std::path::Path;
 //!
 //! #[derive(PcdDeserialize)]
@@ -19,8 +19,8 @@
 //! }
 //!
 //! fn main() -> Result<()> {
-//!     let reader: Reader<Point, _> = ReaderBuilder::open("test_files/ascii.pcd")?;
-//!     let points: Result<Vec<_>> = reader.collect();
+//!     let reader = Reader::open("test_files/ascii.pcd")?;
+//!     let points: Result<Vec<Point>> = reader.collect();
 //!     assert_eq!(points?.len(), 213);
 //!     Ok(())
 //! }
@@ -54,82 +54,22 @@ where
     _phantom: PhantomData<T>,
 }
 
-impl<R, Record> Reader<Record, R>
+impl<'a, Record> Reader<Record, BufReader<Cursor<&'a [u8]>>>
 where
-    R: BufRead,
-{
-    /// Get meta data.
-    pub fn meta(&self) -> &PcdMeta {
-        &self.meta
-    }
-}
-
-impl<R, Record> Iterator for Reader<Record, R>
-where
-    R: BufRead,
     Record: PcdDeserialize,
 {
-    type Item = Result<Record>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.finished {
-            return None;
-        }
-
-        let record_result = match self.meta.data {
-            DataKind::Ascii => Record::read_line(&mut self.reader, &self.meta.field_defs),
-            DataKind::Binary => Record::read_chunk(&mut self.reader, &self.meta.field_defs),
-        };
-
-        match record_result {
-            Ok(_) => {
-                self.record_count += 1;
-                if self.record_count == self.meta.num_points as usize {
-                    self.finished = true;
-                }
-            }
-            Err(_) => {
-                self.finished = true;
-            }
-        }
-
-        Some(record_result)
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let size = self.meta.num_points as usize;
-        (size, Some(size))
-    }
-}
-
-/// A builder type that builds [Reader](Reader).
-pub struct ReaderBuilder {
-    _private: [u8; 0],
-}
-
-impl ReaderBuilder {
-    pub fn build_from_bytes<Record>(buf: &[u8]) -> Result<Reader<Record, BufReader<Cursor<&[u8]>>>>
-    where
-        Record: PcdDeserialize,
-    {
+    pub fn from_bytes(buf: &'a [u8]) -> Result<Self> {
         let reader = BufReader::new(Cursor::new(buf));
-        Self::build_from_reader(reader)
+        Self::from_reader(reader)
     }
+}
 
-    pub fn open<Record, P>(path: P) -> Result<Reader<Record, BufReader<File>>>
-    where
-        Record: PcdDeserialize,
-        P: AsRef<Path>,
-    {
-        let file = BufReader::new(File::open(path.as_ref())?);
-        Self::build_from_reader(file)
-    }
-
-    pub fn build_from_reader<Record, R>(mut reader: R) -> Result<Reader<Record, R>>
-    where
-        Record: PcdDeserialize,
-        R: BufRead,
-    {
+impl<Record, R> Reader<Record, R>
+where
+    Record: PcdDeserialize,
+    R: BufRead,
+{
+    pub fn from_reader(mut reader: R) -> Result<Self> {
         let mut line_count = 0;
         let meta = crate::utils::load_meta(&mut reader, &mut line_count)?;
 
@@ -179,5 +119,63 @@ impl ReaderBuilder {
         };
 
         Ok(pcd_reader)
+    }
+}
+
+impl<Record> Reader<Record, BufReader<File>>
+where
+    Record: PcdDeserialize,
+{
+    pub fn open(path: impl AsRef<Path>) -> Result<Self> {
+        let file = BufReader::new(File::open(path.as_ref())?);
+        Self::from_reader(file)
+    }
+}
+
+impl<R, Record> Reader<Record, R>
+where
+    R: BufRead,
+{
+    /// Get meta data.
+    pub fn meta(&self) -> &PcdMeta {
+        &self.meta
+    }
+}
+
+impl<R, Record> Iterator for Reader<Record, R>
+where
+    R: BufRead,
+    Record: PcdDeserialize,
+{
+    type Item = Result<Record>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.finished {
+            return None;
+        }
+
+        let record_result = match self.meta.data {
+            DataKind::Ascii => Record::read_line(&mut self.reader, &self.meta.field_defs),
+            DataKind::Binary => Record::read_chunk(&mut self.reader, &self.meta.field_defs),
+        };
+
+        match record_result {
+            Ok(_) => {
+                self.record_count += 1;
+                if self.record_count == self.meta.num_points as usize {
+                    self.finished = true;
+                }
+            }
+            Err(_) => {
+                self.finished = true;
+            }
+        }
+
+        Some(record_result)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let size = self.meta.num_points as usize;
+        (size, Some(size))
     }
 }
