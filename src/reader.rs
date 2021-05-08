@@ -19,9 +19,9 @@
 //! }
 //!
 //! fn main() -> Result<()> {
-//!     let reader: Reader<Point, _> = ReaderBuilder::from_path("test_files/ascii.pcd")?;
-//!     let points = reader.collect::<Result<Vec<_>>>()?;
-//!     assert_eq!(points.len(), 213);
+//!     let reader: Reader<Point, _> = ReaderBuilder::open("test_files/ascii.pcd")?;
+//!     let points: Result<Vec<_>> = reader.collect();
+//!     assert_eq!(points?.len(), 213);
 //!     Ok(())
 //! }
 //! ```
@@ -29,7 +29,7 @@
 use crate::{
     error::Error,
     metas::{DataKind, FieldDef, PcdMeta},
-    record::PcdDeserialize,
+    record::{DynRecord, PcdDeserialize},
 };
 use anyhow::Result;
 use std::{
@@ -39,8 +39,11 @@ use std::{
     path::Path,
 };
 
-/// A reader type that loads points from PCD data.
-pub struct Reader<Record, R>
+/// The `DynReader` struct loads points with schema determined in runtime.
+pub type DynReader<R> = Reader<DynRecord, R>;
+
+/// The `Reader<T, R>` struct loads points into type `T` from reader `R`.
+pub struct Reader<T, R>
 where
     R: Read,
 {
@@ -48,7 +51,7 @@ where
     record_count: usize,
     finished: bool,
     reader: R,
-    _phantom: PhantomData<Record>,
+    _phantom: PhantomData<T>,
 }
 
 impl<R, Record> Reader<Record, R>
@@ -105,24 +108,24 @@ pub struct ReaderBuilder {
 }
 
 impl ReaderBuilder {
-    pub fn from_bytes<Record>(buf: &[u8]) -> Result<Reader<Record, BufReader<Cursor<&[u8]>>>>
+    pub fn build_from_bytes<Record>(buf: &[u8]) -> Result<Reader<Record, BufReader<Cursor<&[u8]>>>>
     where
         Record: PcdDeserialize,
     {
         let reader = BufReader::new(Cursor::new(buf));
-        Self::from_reader(reader)
+        Self::build_from_reader(reader)
     }
 
-    pub fn from_path<P, Record>(path: P) -> Result<Reader<Record, BufReader<File>>>
+    pub fn open<P, Record>(path: P) -> Result<Reader<Record, BufReader<File>>>
     where
         Record: PcdDeserialize,
         P: AsRef<Path>,
     {
         let file = BufReader::new(File::open(path.as_ref())?);
-        Self::from_reader(file)
+        Self::build_from_reader(file)
     }
 
-    pub fn from_reader<R, Record>(mut reader: R) -> Result<Reader<Record, R>>
+    pub fn build_from_reader<R, Record>(mut reader: R) -> Result<Reader<Record, R>>
     where
         Record: PcdDeserialize,
         R: BufRead,

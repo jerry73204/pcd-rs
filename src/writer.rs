@@ -37,7 +37,7 @@
 
 use crate::{
     metas::{DataKind, FieldDef, ValueKind, ViewPoint},
-    record::PcdSerialize,
+    record::{DynRecord, PcdSerialize},
 };
 use anyhow::{bail, Result};
 use std::{
@@ -47,6 +47,9 @@ use std::{
     marker::PhantomData,
     path::Path,
 };
+
+/// The `DynReader` struct writes points with schema determined in runtime.
+pub type DynWriter<W> = Writer<DynRecord, W>;
 
 /// A builder type that builds [Writer](crate::writer::Writer).
 pub struct WriterBuilder {
@@ -223,8 +226,8 @@ impl WriterBuilder {
     }
 }
 
-/// A Writer type that write points to PCD data.
-pub struct Writer<Record, W>
+/// The `Writer` struct writes points in type `T` to writer `W`.
+pub struct Writer<T, W>
 where
     W: Write + Seek,
 {
@@ -235,7 +238,7 @@ where
     points_arg_begin: u64,
     points_arg_width: usize,
     finished: bool,
-    _phantom: PhantomData<Record>,
+    _phantom: PhantomData<T>,
 }
 
 impl<W, Record> Writer<Record, W>

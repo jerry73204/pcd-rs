@@ -12,9 +12,9 @@ mod example {
     }
 
     pub fn main() -> Result<()> {
-        let reader: Reader<Point, _> = ReaderBuilder::from_path("test_files/ascii.pcd")?;
-        let points = reader.collect::<Result<Vec<_>>>()?;
-        println!("{} points found", points.len());
+        let reader = ReaderBuilder::from_path::<Point>("test_files/ascii.pcd")?;
+        let points: Result<Vec<_>> = reader.collect();
+        println!("{} points found", points?.len());
         Ok(())
     }
 }

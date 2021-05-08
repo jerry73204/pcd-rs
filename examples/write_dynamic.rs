@@ -1,5 +1,5 @@
 use anyhow::Result;
-use pcd_rs::{DataKind, DynRecord, Field, ValueKind, Writer, WriterBuilder};
+use pcd_rs::{DataKind, DynRecord, DynWriter, Field, ValueKind, WriterBuilder};
 
 fn main() -> Result<()> {
     // output path
@@ -31,10 +31,9 @@ fn main() -> Result<()> {
         ("z", ValueKind::I32, 1),
     ];
 
-    let mut writer: Writer<DynRecord, _> =
-        WriterBuilder::new(300, 1, Default::default(), DataKind::Ascii)?
-            .schema(schema)?
-            .create(path)?;
+    let mut writer: DynWriter<_> = WriterBuilder::new(300, 1, Default::default(), DataKind::Ascii)?
+        .schema(schema)?
+        .create(path)?;
 
     for point in dump_points.iter() {
         writer.push(&point)?;

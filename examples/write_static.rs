@@ -35,8 +35,8 @@ mod example {
         ];
 
         // serialize points
-        let mut writer: Writer<Point, _> =
-            WriterBuilder::new(300, 1, Default::default(), DataKind::Ascii)?.create(path)?;
+        let mut writer = WriterBuilder::new(300, 1, Default::default(), DataKind::Ascii)?
+            .create::<Point>(path)?;
 
         for point in dump_points.iter() {
             writer.push(&point)?;

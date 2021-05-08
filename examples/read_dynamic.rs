@@ -1,9 +1,9 @@
 use anyhow::Result;
-use pcd_rs::{DynRecord, Reader, ReaderBuilder};
+use pcd_rs::{DynReader, ReaderBuilder};
 
 fn main() -> Result<()> {
-    let reader: Reader<DynRecord, _> = ReaderBuilder::from_path("test_files/binary.pcd")?;
-    let points = reader.collect::<Result<Vec<_>>>()?;
-    println!("{} points", points.len());
+    let reader: DynReader<_> = ReaderBuilder::open("test_files/binary.pcd")?;
+    let points: Result<Vec<_>> = reader.collect();
+    println!("{} points", points?.len());
     Ok(())
 }
