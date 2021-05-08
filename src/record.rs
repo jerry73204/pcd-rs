@@ -48,7 +48,7 @@
 //! ```
 
 use crate::{
-    error::PcdError,
+    error::Error,
     metas::{FieldDef, ValueKind},
 };
 use anyhow::{bail, Result};
@@ -397,7 +397,7 @@ impl PcdDeserialize for DynRecord {
 
         {
             let expect = field_defs.iter().map(|def| def.count as usize).sum();
-            let error = PcdError::new_text_token_mismatch_error(expect, tokens.len());
+            let error = Error::new_text_token_mismatch_error(expect, tokens.len());
             if tokens.len() != expect {
                 return Err(error.into());
             }

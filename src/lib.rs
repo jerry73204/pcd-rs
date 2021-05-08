@@ -15,7 +15,7 @@ pub mod record;
 mod utils;
 pub mod writer;
 
-pub use error::PcdError;
+pub use error::Error;
 pub use metas::{DataKind, FieldDef, PcdMeta, TypeKind, ValueKind, ViewPoint};
 pub use pcd_rs_derive::{PcdDeserialize, PcdSerialize};
 pub use reader::{Reader, ReaderBuilder};

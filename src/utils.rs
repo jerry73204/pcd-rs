@@ -1,5 +1,5 @@
 use crate::{
-    error::PcdError,
+    error::Error,
     metas::{DataKind, FieldDef, PcdMeta, TypeKind, ValueKind, ViewPoint},
 };
 use anyhow::Result;
@@ -13,9 +13,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
             *line_count += 1;
 
             if read_size == 0 {
-                return Err(
-                    PcdError::new_parse_error(*line_count, "Unexpected end of file").into(),
-                );
+                return Err(Error::new_parse_error(*line_count, "Unexpected end of file").into());
             }
 
             let line_stripped = match line.split('#').nth(0) {
@@ -31,7 +29,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
 
             if tokens.is_empty() {
                 let desc = format!("Cannot parse empty line at line {}", *line_count + 1);
-                return Err(PcdError::new_parse_error(*line_count, &desc).into());
+                return Err(Error::new_parse_error(*line_count, &desc).into());
             }
 
             if tokens[0] != expect_entry {
@@ -41,7 +39,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
                     tokens[0],
                     *line_count + 1
                 );
-                return Err(PcdError::new_parse_error(*line_count, &desc).into());
+                return Err(Error::new_parse_error(*line_count, &desc).into());
             }
 
             return Ok(tokens);
@@ -59,12 +57,12 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
                         "Unsupported version {:?}. Supported versions are: 0.7",
                         tokens[1]
                     );
-                    return Err(PcdError::new_parse_error(*line_count, &desc).into());
+                    return Err(Error::new_parse_error(*line_count, &desc).into());
                 }
             }
         } else {
             return Err(
-                PcdError::new_parse_error(*line_count, "VERSION line is not understood").into(),
+                Error::new_parse_error(*line_count, "VERSION line is not understood").into(),
             );
         }
     };
@@ -73,7 +71,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
         let tokens = get_meta_line("FIELDS")?;
         if tokens.len() == 1 {
             return Err(
-                PcdError::new_parse_error(*line_count, "FIELDS line is not understood").into(),
+                Error::new_parse_error(*line_count, "FIELDS line is not understood").into(),
             );
         }
 
@@ -84,7 +82,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
             let field = tk;
             if name_set.contains(field) {
                 let desc = format!("field name {:?} is specified more than once", field);
-                return Err(PcdError::new_parse_error(*line_count, &desc).into());
+                return Err(Error::new_parse_error(*line_count, &desc).into());
             }
 
             name_set.insert(field);
@@ -97,9 +95,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
     let meta_size = {
         let tokens = get_meta_line("SIZE")?;
         if tokens.len() == 1 {
-            return Err(
-                PcdError::new_parse_error(*line_count, "SIZE line is not understood").into(),
-            );
+            return Err(Error::new_parse_error(*line_count, "SIZE line is not understood").into());
         }
 
         let mut sizes = vec![];
@@ -115,9 +111,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
         let tokens = get_meta_line("TYPE")?;
 
         if tokens.len() == 1 {
-            return Err(
-                PcdError::new_parse_error(*line_count, "TYPE line is not understood").into(),
-            );
+            return Err(Error::new_parse_error(*line_count, "TYPE line is not understood").into());
         }
 
         let mut types = vec![];
@@ -128,7 +122,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
                 "F" => TypeKind::F,
                 _ => {
                     let desc = format!("Invalid type character {:?} in TYPE line", type_char);
-                    return Err(PcdError::new_parse_error(*line_count, &desc).into());
+                    return Err(Error::new_parse_error(*line_count, &desc).into());
                 }
             };
             types.push(type_);
@@ -141,9 +135,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
         let tokens = get_meta_line("COUNT")?;
 
         if tokens.len() == 1 {
-            return Err(
-                PcdError::new_parse_error(*line_count, "COUNT line is not understood").into(),
-            );
+            return Err(Error::new_parse_error(*line_count, "COUNT line is not understood").into());
         }
 
         let mut counts = vec![];
@@ -159,9 +151,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
         let tokens = get_meta_line("WIDTH")?;
 
         if tokens.len() != 2 {
-            return Err(
-                PcdError::new_parse_error(*line_count, "WIDTH line is not understood").into(),
-            );
+            return Err(Error::new_parse_error(*line_count, "WIDTH line is not understood").into());
         }
 
         let width: u64 = tokens[1].parse()?;
@@ -172,7 +162,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
         let tokens = get_meta_line("HEIGHT")?;
         if tokens.len() != 2 {
             return Err(
-                PcdError::new_parse_error(*line_count, "HEIGHT line is not understood").into(),
+                Error::new_parse_error(*line_count, "HEIGHT line is not understood").into(),
             );
         }
 
@@ -185,7 +175,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
 
         if tokens.len() != 8 {
             return Err(
-                PcdError::new_parse_error(*line_count, "VIEWPOINT line is not understood").into(),
+                Error::new_parse_error(*line_count, "VIEWPOINT line is not understood").into(),
             );
         }
 
@@ -214,7 +204,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
 
         if tokens.len() != 2 {
             return Err(
-                PcdError::new_parse_error(*line_count, "POINTS line is not understood").into(),
+                Error::new_parse_error(*line_count, "POINTS line is not understood").into(),
             );
         }
 
@@ -226,9 +216,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
         let tokens = get_meta_line("DATA")?;
 
         if tokens.len() != 2 {
-            return Err(
-                PcdError::new_parse_error(*line_count, "DATA line is not understood").into(),
-            );
+            return Err(Error::new_parse_error(*line_count, "DATA line is not understood").into());
         }
 
         match tokens[1].as_str() {
@@ -236,7 +224,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
             "binary" => DataKind::Binary,
             _ => {
                 return Err(
-                    PcdError::new_parse_error(*line_count, "DATA line is not understood").into(),
+                    Error::new_parse_error(*line_count, "DATA line is not understood").into(),
                 );
             }
         }
@@ -244,27 +232,21 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
 
     // Check integrity
     if meta_size.len() != meta_fields.len() {
-        return Err(PcdError::new_parse_error(
-            *line_count,
-            "SIZE entry conflicts with FIELD entry",
-        )
-        .into());
+        return Err(
+            Error::new_parse_error(*line_count, "SIZE entry conflicts with FIELD entry").into(),
+        );
     }
 
     if meta_type.len() != meta_fields.len() {
-        return Err(PcdError::new_parse_error(
-            *line_count,
-            "TYPE entry conflicts with FIELD entry",
-        )
-        .into());
+        return Err(
+            Error::new_parse_error(*line_count, "TYPE entry conflicts with FIELD entry").into(),
+        );
     }
 
     if meta_count.len() != meta_fields.len() {
-        return Err(PcdError::new_parse_error(
-            *line_count,
-            "COUNT entry conflicts with FIELD entry",
-        )
-        .into());
+        return Err(
+            Error::new_parse_error(*line_count, "COUNT entry conflicts with FIELD entry").into(),
+        );
     }
 
     // Organize field type
@@ -288,7 +270,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
                 _ => {
                     let desc =
                         format!("Field type {:?} with size {} is not supported", type_, size);
-                    return Err(PcdError::new_parse_error(*line_count, &desc).into());
+                    return Err(Error::new_parse_error(*line_count, &desc).into());
                 }
             };
 

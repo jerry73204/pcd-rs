@@ -27,7 +27,7 @@
 //! ```
 
 use crate::{
-    error::PcdError,
+    error::Error,
     metas::{DataKind, FieldDef, PcdMeta},
     record::PcdDeserialize,
 };
@@ -99,8 +99,10 @@ where
     }
 }
 
-/// A builder type that builds [Reader](crate::reader::Reader).
-pub struct ReaderBuilder;
+/// A builder type that builds [Reader](Reader).
+pub struct ReaderBuilder {
+    _private: [u8; 0],
+}
 
 impl ReaderBuilder {
     pub fn from_bytes<Record>(buf: &[u8]) -> Result<Reader<Record, BufReader<Cursor<&[u8]>>>>
@@ -108,7 +110,7 @@ impl ReaderBuilder {
         Record: PcdDeserialize,
     {
         let reader = BufReader::new(Cursor::new(buf));
-        Ok(Self::from_reader(reader)?)
+        Self::from_reader(reader)
     }
 
     pub fn from_path<P, Record>(path: P) -> Result<Reader<Record, BufReader<File>>>
@@ -117,7 +119,7 @@ impl ReaderBuilder {
         P: AsRef<Path>,
     {
         let file = BufReader::new(File::open(path.as_ref())?);
-        Ok(Self::from_reader(file)?)
+        Self::from_reader(file)
     }
 
     pub fn from_reader<R, Record>(mut reader: R) -> Result<Reader<Record, R>>
@@ -133,7 +135,7 @@ impl ReaderBuilder {
             let record_spec = Record::read_spec();
 
             let mismatch_error =
-                PcdError::new_schema_mismatch_error(record_spec.as_slice(), &meta.field_defs);
+                Error::new_schema_mismatch_error(record_spec.as_slice(), &meta.field_defs);
 
             if record_spec.len() != meta.field_defs.len() {
                 return Err(mismatch_error.into());
