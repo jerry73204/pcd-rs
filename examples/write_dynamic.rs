@@ -1,5 +1,6 @@
 use anyhow::Result;
-use pcd_rs::{DataKind, DynRecord, DynWriter, Field, ValueKind, WriterBuilder};
+use pcd_rs::{DataKind, DynRecord, DynWriter, Field, Schema, ValueKind, WriterInit};
+use std::iter::FromIterator;
 
 fn main() -> Result<()> {
     // output path
@@ -31,9 +32,14 @@ fn main() -> Result<()> {
         ("z", ValueKind::I32, 1),
     ];
 
-    let mut writer: DynWriter<_> = WriterBuilder::new(300, 1, Default::default(), DataKind::Ascii)?
-        .schema(schema)?
-        .create(path)?;
+    let mut writer: DynWriter<_> = WriterInit {
+        width: 300,
+        height: 1,
+        viewpoint: Default::default(),
+        data_kind: DataKind::Ascii,
+        schema: Some(Schema::from_iter(schema)),
+    }
+    .create(path)?;
 
     for point in dump_points.iter() {
         writer.push(&point)?;

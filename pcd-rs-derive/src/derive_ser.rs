@@ -2,8 +2,8 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use regex::Regex;
 use syn::{
-    spanned::Spanned, Attribute, Data, DeriveInput, Error as SynError, Fields, FieldsNamed, Ident,
-    Lit, Meta, NestedMeta, Result as SynResult, Type, TypeArray, TypePath,
+    spanned::Spanned, Attribute, Data, DeriveInput, Fields, FieldsNamed, Ident, Lit, Meta,
+    NestedMeta, Type, TypeArray, TypePath,
 };
 
 struct DerivedTokens {
@@ -12,11 +12,11 @@ struct DerivedTokens {
     pub text_write_tokens: TokenStream,
 }
 
-pub fn f_pcd_record_write_derive(input: DeriveInput) -> SynResult<TokenStream> {
+pub fn f_pcd_record_write_derive(input: DeriveInput) -> syn::Result<TokenStream> {
     let struct_name = &input.ident;
 
     if !input.generics.params.is_empty() {
-        return Err(SynError::new(
+        return Err(syn::Error::new(
             input.span(),
             "Canont derive PcdSerialize for struct with generics",
         ));
@@ -25,13 +25,13 @@ pub fn f_pcd_record_write_derive(input: DeriveInput) -> SynResult<TokenStream> {
     let data = match &input.data {
         Data::Struct(data) => data,
         Data::Enum(_) => {
-            return Err(SynError::new(
+            return Err(syn::Error::new(
                 input.span(),
                 "Canont derive PcdSerialize for enum",
             ))
         }
         Data::Union(_) => {
-            return Err(SynError::new(
+            return Err(syn::Error::new(
                 input.span(),
                 "Canont derive PcdSerialize for union",
             ))
@@ -45,13 +45,13 @@ pub fn f_pcd_record_write_derive(input: DeriveInput) -> SynResult<TokenStream> {
     } = match &data.fields {
         Fields::Named(fields) => derive_named_fields(struct_name, &fields)?,
         Fields::Unnamed(_) => {
-            return Err(SynError::new(
+            return Err(syn::Error::new(
                 input.span(),
                 "Canont derive PcdSerialize for tuple struct",
             ))
         }
         Fields::Unit => {
-            return Err(SynError::new(
+            return Err(syn::Error::new(
                 input.span(),
                 "Canont derive PcdSerialize for unit struct",
             ))
@@ -64,17 +64,17 @@ pub fn f_pcd_record_write_derive(input: DeriveInput) -> SynResult<TokenStream> {
                 false
             }
 
-            fn write_spec() -> Vec<(String, ::pcd_rs::metas::ValueKind, usize)> {
+            fn write_spec() -> ::pcd_rs::metas::Schema {
                 #write_spec_tokens
             }
 
-            fn write_chunk<R: std::io::Write>(&self, writer: &mut R, _: &[(String, ::pcd_rs::metas::ValueKind, usize)]) -> ::pcd_rs::anyhow::Result<()> {
+            fn write_chunk<R: std::io::Write>(&self, writer: &mut R, _: &::pcd_rs::metas::Schema) -> ::pcd_rs::anyhow::Result<()> {
                 use ::pcd_rs::byteorder::{LittleEndian, WriteBytesExt};
                 { #bin_write_tokens };
                 Ok(())
             }
 
-            fn write_line<R: std::io::Write>(&self, writer: &mut R, _: &[(String, ::pcd_rs::metas::ValueKind, usize)]) -> ::pcd_rs::anyhow::Result<()> {
+            fn write_line<R: std::io::Write>(&self, writer: &mut R, _: &::pcd_rs::metas::Schema) -> ::pcd_rs::anyhow::Result<()> {
                 let mut tokens = Vec::<String>::new();
                 { #text_write_tokens };
                 let line = tokens.join(" ");
@@ -87,13 +87,13 @@ pub fn f_pcd_record_write_derive(input: DeriveInput) -> SynResult<TokenStream> {
     Ok(expanded)
 }
 
-fn derive_named_fields(struct_name: &Ident, fields: &FieldsNamed) -> SynResult<DerivedTokens> {
+fn derive_named_fields(struct_name: &Ident, fields: &FieldsNamed) -> syn::Result<DerivedTokens> {
     let (field_idents, write_specs, bin_write_fields, text_write_fields) = fields
         .named
         .iter()
         .enumerate()
         .map(|(field_index, field)| {
-            let field_error = SynError::new(
+            let field_error = syn::Error::new(
                 field.span(),
                 "Type of struct field must be a primitive type or array of primitive type.",
             );
@@ -116,7 +116,7 @@ fn derive_named_fields(struct_name: &Ident, fields: &FieldsNamed) -> SynResult<D
 
             Ok((field_ident, pcd_name, tokens))
         })
-        .collect::<SynResult<Vec<_>>>()?
+        .collect::<syn::Result<Vec<_>>>()?
         .into_iter()
         .fold(
             (vec![], vec![], vec![], vec![]),
@@ -136,7 +136,11 @@ fn derive_named_fields(struct_name: &Ident, fields: &FieldsNamed) -> SynResult<D
             },
         );
 
-    let write_spec_tokens = quote! { vec![#(#write_specs),*] };
+    let write_spec_tokens = quote! {
+        vec![#(#write_specs),*]
+            .into_iter()
+            .collect::<::pcd_rs::metas::Schema>()
+    };
     let bin_write_tokens = quote! {
         let #struct_name { #(#field_idents),* } = self;
         #(#bin_write_fields)*
@@ -284,7 +288,7 @@ fn make_rw_expr(type_ident: &Ident) -> Option<DerivedTokens> {
     Some(derived_tokens)
 }
 
-fn parse_field_attributes(attrs: &[Attribute]) -> SynResult<Option<String>> {
+fn parse_field_attributes(attrs: &[Attribute]) -> syn::Result<Option<String>> {
     let name_regex = Regex::new(r"^[[:word:]]+$").unwrap();
 
     let rename_opt = attrs
@@ -293,21 +297,21 @@ fn parse_field_attributes(attrs: &[Attribute]) -> SynResult<Option<String>> {
             let attr_ident = attr.path.get_ident()?;
             Some((attr, attr_ident))
         })
-        .fold(Ok(None), |result, (attr, attr_ident)| -> SynResult<_> {
+        .fold(Ok(None), |result, (attr, attr_ident)| -> syn::Result<_> {
             let name_opt = result?;
             let attr_ident_name = attr_ident.to_string();
 
             match attr_ident_name.as_str() {
                 "pcd_rename" => {
                     if name_opt.is_some() {
-                        let error = SynError::new(
+                        let error = syn::Error::new(
                             attr.span(),
                             r#""pcd_rename" cannot be specified more than once."#,
                         );
                         return Err(error);
                     }
 
-                    let format_error = SynError::new(
+                    let format_error = syn::Error::new(
                         attr.span(),
                         r#"The attribute must be in form of #[pcd_rename("...")]."#,
                     );
@@ -321,7 +325,7 @@ fn parse_field_attributes(attrs: &[Attribute]) -> SynResult<Option<String>> {
 
                             if let NestedMeta::Lit(Lit::Str(litstr)) = nested {
                                 let name = litstr.value();
-                                let error = SynError::new(
+                                let error = syn::Error::new(
                                     litstr.span(),
                                     "The name argument must be composed of word characters.",
                                 );

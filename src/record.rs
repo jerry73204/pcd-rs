@@ -49,7 +49,7 @@
 
 use crate::{
     error::Error,
-    metas::{FieldDef, ValueKind},
+    metas::{FieldDef, Schema, ValueKind},
 };
 use anyhow::{bail, Result};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
@@ -65,8 +65,8 @@ use std::io::prelude::*;
 pub trait PcdDeserialize: Sized {
     fn is_dynamic() -> bool;
     fn read_spec() -> Vec<(Option<String>, ValueKind, Option<usize>)>;
-    fn read_chunk<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Result<Self>;
-    fn read_line<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Result<Self>;
+    fn read_chunk<R: BufRead>(reader: &mut R, field_defs: &Schema) -> Result<Self>;
+    fn read_line<R: BufRead>(reader: &mut R, field_defs: &Schema) -> Result<Self>;
 }
 
 /// [PcdSerialize](crate::record::PcdSerialize) is analogous to a _point_ written by a writer.
@@ -78,17 +78,9 @@ pub trait PcdDeserialize: Sized {
 /// Otherwise if the data is in binary mode, the record is represented by a fixed size chunk.
 pub trait PcdSerialize: Sized {
     fn is_dynamic() -> bool;
-    fn write_spec() -> Vec<(String, ValueKind, usize)>;
-    fn write_chunk<R: Write + Seek>(
-        &self,
-        writer: &mut R,
-        spec: &[(String, ValueKind, usize)],
-    ) -> Result<()>;
-    fn write_line<R: Write + Seek>(
-        &self,
-        writer: &mut R,
-        spec: &[(String, ValueKind, usize)],
-    ) -> Result<()>;
+    fn write_spec() -> Schema;
+    fn write_chunk<R: Write + Seek>(&self, writer: &mut R, spec: &Schema) -> Result<()>;
+    fn write_line<R: Write + Seek>(&self, writer: &mut R, spec: &Schema) -> Result<()>;
 }
 
 // Runtime record types
@@ -144,32 +136,34 @@ impl Field {
 pub struct DynRecord(pub Vec<Field>);
 
 impl DynRecord {
-    pub fn is_schema_consistent(&self, schema: &[(String, ValueKind, usize)]) -> bool {
+    pub fn is_schema_consistent(&self, schema: &Schema) -> bool {
         if self.0.len() != schema.len() {
             return false;
         }
 
-        for (field, (_name, kind, count)) in self.0.iter().zip(schema.iter()) {
-            use Field as F;
-            use ValueKind as K;
+        self.0
+            .iter()
+            .zip(schema.iter())
+            .all(|(field, schema_field)| {
+                use Field as F;
+                use ValueKind as K;
 
-            let matched = match field {
-                F::I8(values) => values.len() == *count && *kind == K::I8,
-                F::I16(values) => values.len() == *count && *kind == K::I16,
-                F::I32(values) => values.len() == *count && *kind == K::I32,
-                F::U8(values) => values.len() == *count && *kind == K::U8,
-                F::U16(values) => values.len() == *count && *kind == K::U16,
-                F::U32(values) => values.len() == *count && *kind == K::U32,
-                F::F32(values) => values.len() == *count && *kind == K::F32,
-                F::F64(values) => values.len() == *count && *kind == K::F64,
-            };
+                if field.count() != schema_field.count as usize {
+                    return false;
+                }
 
-            if !matched {
-                return false;
-            }
-        }
-
-        true
+                matches!(
+                    (field, schema_field.kind),
+                    (F::I8(_), K::I8)
+                        | (F::I16(_), K::I16)
+                        | (F::I32(_), K::I32)
+                        | (F::U8(_), K::U8)
+                        | (F::U16(_), K::U16)
+                        | (F::U32(_), K::U32)
+                        | (F::F32(_), K::F32)
+                        | (F::F64(_), K::F64)
+                )
+            })
     }
 }
 
@@ -178,15 +172,11 @@ impl PcdSerialize for DynRecord {
         true
     }
 
-    fn write_spec() -> Vec<(String, ValueKind, usize)> {
+    fn write_spec() -> Schema {
         unreachable!();
     }
 
-    fn write_chunk<Writer>(
-        &self,
-        writer: &mut Writer,
-        spec: &[(String, ValueKind, usize)],
-    ) -> Result<()>
+    fn write_chunk<Writer>(&self, writer: &mut Writer, spec: &Schema) -> Result<()>
     where
         Writer: Write + Seek,
     {
@@ -252,11 +242,7 @@ impl PcdSerialize for DynRecord {
         Ok(())
     }
 
-    fn write_line<Writer>(
-        &self,
-        writer: &mut Writer,
-        spec: &[(String, ValueKind, usize)],
-    ) -> Result<()>
+    fn write_line<Writer>(&self, writer: &mut Writer, spec: &Schema) -> Result<()>
     where
         Writer: Write + Seek,
     {
@@ -320,7 +306,7 @@ impl PcdDeserialize for DynRecord {
         unreachable!();
     }
 
-    fn read_chunk<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Result<Self> {
+    fn read_chunk<R: BufRead>(reader: &mut R, field_defs: &Schema) -> Result<Self> {
         let fields = field_defs
             .iter()
             .map(|def| {
@@ -386,7 +372,7 @@ impl PcdDeserialize for DynRecord {
         Ok(Self(fields))
     }
 
-    fn read_line<R: BufRead>(reader: &mut R, field_defs: &[FieldDef]) -> Result<Self> {
+    fn read_line<R: BufRead>(reader: &mut R, field_defs: &Schema) -> Result<Self> {
         let mut line = String::new();
         reader.read_line(&mut line)?;
         let tokens = line.split_ascii_whitespace().collect::<Vec<_>>();
@@ -477,12 +463,12 @@ impl PcdDeserialize for u8 {
         vec![(None, ValueKind::U8, Some(1))]
     }
 
-    fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Result<Self> {
+    fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &Schema) -> Result<Self> {
         let value = reader.read_u8()?;
         Ok(value)
     }
 
-    fn read_line<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Result<Self> {
+    fn read_line<R: BufRead>(reader: &mut R, _field_defs: &Schema) -> Result<Self> {
         let mut line = String::new();
         reader.read_line(&mut line)?;
         Ok(line.parse()?)
@@ -498,12 +484,12 @@ impl PcdDeserialize for i8 {
         vec![(None, ValueKind::I8, Some(1))]
     }
 
-    fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Result<Self> {
+    fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &Schema) -> Result<Self> {
         let value = reader.read_i8()?;
         Ok(value)
     }
 
-    fn read_line<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Result<Self> {
+    fn read_line<R: BufRead>(reader: &mut R, _field_defs: &Schema) -> Result<Self> {
         let mut line = String::new();
         reader.read_line(&mut line)?;
         Ok(line.parse()?)
@@ -521,12 +507,12 @@ macro_rules! impl_primitive {
                 vec![(None, ValueKind::$kind, Some(1))]
             }
 
-            fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Result<Self> {
+            fn read_chunk<R: BufRead>(reader: &mut R, _field_defs: &Schema) -> Result<Self> {
                 let value = reader.$read::<LittleEndian>()?;
                 Ok(value)
             }
 
-            fn read_line<R: BufRead>(reader: &mut R, _field_defs: &[FieldDef]) -> Result<Self> {
+            fn read_line<R: BufRead>(reader: &mut R, _field_defs: &Schema) -> Result<Self> {
                 let mut line = String::new();
                 reader.read_line(&mut line)?;
                 Ok(line.parse()?)

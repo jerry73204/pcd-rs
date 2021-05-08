@@ -138,7 +138,7 @@ impl ReaderBuilder {
             let record_spec = Record::read_spec();
 
             let mismatch_error =
-                Error::new_schema_mismatch_error(record_spec.as_slice(), &meta.field_defs);
+                Error::new_schema_mismatch_error(record_spec.as_slice(), &meta.field_defs.fields);
 
             if record_spec.len() != meta.field_defs.len() {
                 return Err(mismatch_error.into());

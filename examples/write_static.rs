@@ -1,5 +1,5 @@
 use anyhow::Result;
-use pcd_rs::{DataKind, PcdDeserialize, PcdSerialize, WriterBuilder};
+use pcd_rs::{DataKind, PcdDeserialize, PcdSerialize, WriterInit};
 
 #[derive(Debug, PcdDeserialize, PcdSerialize, PartialEq)]
 pub struct Point {
@@ -33,8 +33,14 @@ pub fn main() -> Result<()> {
     ];
 
     // serialize points
-    let mut writer = WriterBuilder::new(300, 1, Default::default(), DataKind::Ascii)?
-        .create::<Point, _>(path)?;
+    let mut writer = WriterInit {
+        width: 300,
+        height: 1,
+        viewpoint: Default::default(),
+        data_kind: DataKind::Ascii,
+        schema: None,
+    }
+    .create::<Point, _>(path)?;
 
     for point in dump_points.iter() {
         writer.push(&point)?;

@@ -1,6 +1,6 @@
 use crate::{
     error::Error,
-    metas::{DataKind, FieldDef, PcdMeta, TypeKind, ValueKind, ViewPoint},
+    metas::{DataKind, FieldDef, PcdMeta, Schema, TypeKind, ValueKind, ViewPoint},
 };
 use anyhow::Result;
 use std::{collections::HashSet, io::prelude::*};
@@ -248,45 +248,43 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
     }
 
     // Organize field type
-    let field_defs = {
-        let mut field_defs = vec![];
-        for (((name, type_), size), count) in meta_fields
+    let field_defs: Result<Schema> = {
+        meta_fields
             .iter()
             .zip(meta_type.iter())
             .zip(meta_size.iter())
             .zip(meta_count.iter())
-        {
-            let kind = match (type_, size) {
-                (TypeKind::U, 1) => ValueKind::U8,
-                (TypeKind::U, 2) => ValueKind::U16,
-                (TypeKind::U, 4) => ValueKind::U32,
-                (TypeKind::I, 1) => ValueKind::I8,
-                (TypeKind::I, 2) => ValueKind::I16,
-                (TypeKind::I, 4) => ValueKind::I32,
-                (TypeKind::F, 4) => ValueKind::F32,
-                (TypeKind::F, 8) => ValueKind::F64,
-                _ => {
-                    let desc =
-                        format!("Field type {:?} with size {} is not supported", type_, size);
-                    return Err(Error::new_parse_error(*line_count, &desc).into());
-                }
-            };
+            .map(|(((name, type_), size), &count)| {
+                let kind = match (type_, size) {
+                    (TypeKind::U, 1) => ValueKind::U8,
+                    (TypeKind::U, 2) => ValueKind::U16,
+                    (TypeKind::U, 4) => ValueKind::U32,
+                    (TypeKind::I, 1) => ValueKind::I8,
+                    (TypeKind::I, 2) => ValueKind::I16,
+                    (TypeKind::I, 4) => ValueKind::I32,
+                    (TypeKind::F, 4) => ValueKind::F32,
+                    (TypeKind::F, 8) => ValueKind::F64,
+                    _ => {
+                        let desc =
+                            format!("Field type {:?} with size {} is not supported", type_, size);
+                        return Err(Error::new_parse_error(*line_count, &desc).into());
+                    }
+                };
 
-            let meta = FieldDef {
-                name: name.to_owned(),
-                kind,
-                count: *count,
-            };
+                let meta = FieldDef {
+                    name: name.to_owned(),
+                    kind,
+                    count,
+                };
 
-            field_defs.push(meta);
-        }
-
-        field_defs
+                Ok(meta)
+            })
+            .collect()
     };
 
     let meta = PcdMeta {
         version: meta_version,
-        field_defs,
+        field_defs: field_defs?,
         width: meta_width,
         height: meta_height,
         viewpoint: meta_viewpoint,
