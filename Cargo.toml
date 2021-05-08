@@ -20,5 +20,5 @@ members = [
 byteorder = "1.4.3"
 anyhow = "1.0.40"
 thiserror = "1.0.24"
-regex = "1.5.3"
+regex = "1.5.4"
 pcd-rs-derive = { version = "0.4.0", path = "pcd-rs-derive" }
