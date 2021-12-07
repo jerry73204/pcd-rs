@@ -53,6 +53,7 @@ use crate::{
 };
 use anyhow::{bail, Result};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use num_traits::FromPrimitive;
 use std::io::prelude::*;
 
 /// [PcdDeserialize](crate::record::PcdDeserialize) is analogous to a _point_ returned from a reader.
@@ -164,6 +165,44 @@ impl DynRecord {
                         | (F::F64(_), K::F64)
                 )
             })
+    }
+
+    pub fn xyz<T>(self) -> Option<[T; 3]>
+    where
+        T: 'static + Copy + FromPrimitive,
+    {
+        let (x, y, z) = match &self.0[0..3] {
+            [Field::I8(x), Field::I8(y), Field::I8(z)] => {
+                (T::from_i8(x[0]), T::from_i8(y[0]), T::from_i8(z[0]))
+            }
+            [Field::I16(x), Field::I16(y), Field::I16(z)] => {
+                (T::from_i16(x[0]), T::from_i16(y[0]), T::from_i16(z[0]))
+            }
+            [Field::I32(x), Field::I32(y), Field::I32(z)] => {
+                (T::from_i32(x[0]), T::from_i32(y[0]), T::from_i32(z[0]))
+            }
+            [Field::U8(x), Field::U8(y), Field::U8(z)] => {
+                (T::from_u8(x[0]), T::from_u8(y[0]), T::from_u8(z[0]))
+            }
+            [Field::U16(x), Field::U16(y), Field::U16(z)] => {
+                (T::from_u16(x[0]), T::from_u16(y[0]), T::from_u16(z[0]))
+            }
+            [Field::U32(x), Field::U32(y), Field::U32(z)] => {
+                (T::from_u32(x[0]), T::from_u32(y[0]), T::from_u32(z[0]))
+            }
+            [Field::F32(x), Field::F32(y), Field::F32(z)] => {
+                (T::from_f32(x[0]), T::from_f32(y[0]), T::from_f32(z[0]))
+            }
+            [Field::F64(x), Field::F64(y), Field::F64(z)] => {
+                (T::from_f64(x[0]), T::from_f64(y[0]), T::from_f64(z[0]))
+            }
+            _ => panic!("Point info {:?} is not complete!", &self.0),
+        };
+        if let (Some(x), Some(y), Some(z)) = (x, y, z) {
+            Some([x, y, z])
+        } else {
+            None
+        }
     }
 }
 
