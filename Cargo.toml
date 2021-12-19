@@ -2,7 +2,7 @@
 name = "pcd-rs"
 version = "0.8.0"
 authors = ["jerry73204 <jerry73204@gmail.com>"]
-edition = "2018"
+edition = "2021"
 description = "Working with PCD file format in Rust"
 categories = ["parsing"]
 documentation = "https://docs.rs/pcd-rs/"
