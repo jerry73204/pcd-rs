@@ -1,8 +1,9 @@
+use crate::parse::ItemStruct;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use regex::Regex;
 use syn::{
-    spanned::Spanned, Attribute, Data, DeriveInput, Fields, FieldsNamed, Ident, Lit, Meta,
+    punctuated::Punctuated, spanned::Spanned, token, Attribute, Field, Ident, Lit, Meta,
     NestedMeta, Type, TypeArray, TypePath,
 };
 
@@ -12,51 +13,14 @@ struct DerivedTokens {
     pub text_write_tokens: TokenStream,
 }
 
-pub fn f_pcd_record_write_derive(input: DeriveInput) -> syn::Result<TokenStream> {
-    let struct_name = &input.ident;
-
-    if !input.generics.params.is_empty() {
-        return Err(syn::Error::new(
-            input.span(),
-            "Canont derive PcdSerialize for struct with generics",
-        ));
-    }
-
-    let data = match &input.data {
-        Data::Struct(data) => data,
-        Data::Enum(_) => {
-            return Err(syn::Error::new(
-                input.span(),
-                "Canont derive PcdSerialize for enum",
-            ))
-        }
-        Data::Union(_) => {
-            return Err(syn::Error::new(
-                input.span(),
-                "Canont derive PcdSerialize for union",
-            ))
-        }
-    };
+pub fn f_pcd_record_write_derive(item: ItemStruct) -> syn::Result<TokenStream> {
+    let struct_name = &item.ident;
 
     let DerivedTokens {
         write_spec_tokens,
         bin_write_tokens,
         text_write_tokens,
-    } = match &data.fields {
-        Fields::Named(fields) => derive_named_fields(struct_name, fields)?,
-        Fields::Unnamed(_) => {
-            return Err(syn::Error::new(
-                input.span(),
-                "Canont derive PcdSerialize for tuple struct",
-            ))
-        }
-        Fields::Unit => {
-            return Err(syn::Error::new(
-                input.span(),
-                "Canont derive PcdSerialize for unit struct",
-            ))
-        }
-    };
+    } = derive_named_fields(struct_name, &item.fields)?;
 
     let expanded = quote! {
         impl ::pcd_rs::record::PcdSerialize for #struct_name {
@@ -87,9 +51,11 @@ pub fn f_pcd_record_write_derive(input: DeriveInput) -> syn::Result<TokenStream>
     Ok(expanded)
 }
 
-fn derive_named_fields(struct_name: &Ident, fields: &FieldsNamed) -> syn::Result<DerivedTokens> {
+fn derive_named_fields(
+    struct_name: &Ident,
+    fields: &Punctuated<Field, token::Comma>,
+) -> syn::Result<DerivedTokens> {
     let (field_idents, write_specs, bin_write_fields, text_write_fields) = fields
-        .named
         .iter()
         .enumerate()
         .map(|(field_index, field)| {

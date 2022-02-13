@@ -1,10 +1,11 @@
+use crate::parse::ItemStruct;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use regex::Regex;
 use syn::{
-    spanned::Spanned, Attribute, Data, DeriveInput, Error as SynError, Fields, FieldsNamed,
-    FieldsUnnamed, GenericArgument, Ident, Lit, Meta, NestedMeta, PathArguments,
-    Result as SynResult, Type, TypeArray, TypePath,
+    punctuated::Punctuated, spanned::Spanned, token, Attribute, Error as SynError, Field,
+    GenericArgument, Ident, Lit, Meta, NestedMeta, PathArguments, Result as SynResult, Type,
+    TypeArray, TypePath,
 };
 
 struct DerivedTokens {
@@ -13,46 +14,14 @@ struct DerivedTokens {
     pub text_read_tokens: TokenStream,
 }
 
-pub fn f_pcd_record_read_derive(input: DeriveInput) -> SynResult<TokenStream> {
-    let struct_name = &input.ident;
-
-    if !input.generics.params.is_empty() {
-        return Err(SynError::new(
-            input.span(),
-            "Canont derive PcdDeserialize for struct with generics",
-        ));
-    }
-
-    let data = match &input.data {
-        Data::Struct(data) => data,
-        Data::Enum(_) => {
-            return Err(SynError::new(
-                input.span(),
-                "Canont derive PcdDeserialize for enum",
-            ))
-        }
-        Data::Union(_) => {
-            return Err(SynError::new(
-                input.span(),
-                "Canont derive PcdDeserialize for union",
-            ))
-        }
-    };
+pub fn f_pcd_record_read_derive(item: ItemStruct) -> SynResult<TokenStream> {
+    let struct_name = &item.ident;
 
     let DerivedTokens {
         read_spec_tokens,
         bin_read_tokens,
         text_read_tokens,
-    } = match &data.fields {
-        Fields::Named(fields) => derive_named_fields(struct_name, fields)?,
-        Fields::Unnamed(fields) => derive_unnamed_fields(struct_name, fields)?,
-        Fields::Unit => {
-            return Err(SynError::new(
-                input.span(),
-                "Canont derive PcdDeserialize for unit struct",
-            ))
-        }
-    };
+    } = derive_named_fields(struct_name, &item.fields)?;
 
     let expanded = quote! {
         impl ::pcd_rs::record::PcdDeserialize for #struct_name {
@@ -97,14 +66,16 @@ pub fn f_pcd_record_read_derive(input: DeriveInput) -> SynResult<TokenStream> {
     Ok(expanded)
 }
 
-fn derive_named_fields(struct_name: &Ident, fields: &FieldsNamed) -> SynResult<DerivedTokens> {
+fn derive_named_fields(
+    struct_name: &Ident,
+    fields: &Punctuated<Field, token::Comma>,
+) -> SynResult<DerivedTokens> {
     let (
         field_idents,
         read_specs,
         bin_read_fields,
         text_read_fields,
     ) = fields
-        .named
         .iter()
         .enumerate()
         .map(|(field_index, field)| {
@@ -176,80 +147,6 @@ fn derive_named_fields(struct_name: &Ident, fields: &FieldsNamed) -> SynResult<D
         #struct_name {
             #(#field_idents),*
         }
-    };
-
-    let derived_tokens = DerivedTokens {
-        read_spec_tokens,
-        bin_read_tokens,
-        text_read_tokens,
-    };
-    Ok(derived_tokens)
-}
-
-fn derive_unnamed_fields(struct_name: &Ident, fields: &FieldsUnnamed) -> SynResult<DerivedTokens> {
-    let (
-        var_idents,
-        read_specs,
-        bin_read_fields,
-        text_read_fields,
-    ) = fields
-        .unnamed
-        .iter()
-        .enumerate()
-        .map(|(field_index, field)| {
-            let field_error = SynError::new(
-                field.span(),
-                "Type of struct field must be a primitive type, array of primitive type, or Vec<_> of primitive type",
-            );
-
-            let var_ident = format_ident!("_{}", field_index);
-
-            let tokens = match &field.ty {
-                Type::Array(array) => {
-                    derive_array_field(&var_ident, array)
-                        .ok_or(field_error)?
-                }
-                Type::Path(path) => {
-                    derive_path_field(field_index, &var_ident, path)
-                        .ok_or(field_error)?
-                }
-                _ => {
-                    return Err(field_error)
-                }
-            };
-
-            Ok((var_ident, tokens))
-        })
-        .collect::<SynResult<Vec<_>>>()?
-        .into_iter()
-        .fold(
-            (vec![], vec![], vec![], vec![]),
-            |(mut var_idents, mut read_specs, mut bin_read_fields, mut text_read_fields), (var_ident, tokens)| {
-                let read_spec_tokens = tokens.read_spec_tokens;
-                let pcd_name: Option<String> = None;
-
-                var_idents.push(var_ident);
-                read_specs.push(quote!{ (#pcd_name, #read_spec_tokens) });
-                bin_read_fields.push(tokens.bin_read_tokens);
-                text_read_fields.push(tokens.text_read_tokens);
-                (var_idents, read_specs, bin_read_fields, text_read_fields)
-            }
-        );
-
-    let read_spec_tokens = quote! { vec![#(#read_specs),*] };
-    let bin_read_tokens = quote! {
-        #(#bin_read_fields)*
-
-        #struct_name (
-            #(#var_idents),*
-        )
-    };
-    let text_read_tokens = quote! {
-        #(#text_read_fields)*
-
-        #struct_name (
-            #(#var_idents),*
-        )
     };
 
     let derived_tokens = DerivedTokens {
