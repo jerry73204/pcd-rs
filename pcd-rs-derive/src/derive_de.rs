@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{format_ident, quote};
 use regex::Regex;
 use syn::{
     spanned::Spanned, Attribute, Data, DeriveInput, Error as SynError, Fields, FieldsNamed,
@@ -44,8 +44,8 @@ pub fn f_pcd_record_read_derive(input: DeriveInput) -> SynResult<TokenStream> {
         bin_read_tokens,
         text_read_tokens,
     } = match &data.fields {
-        Fields::Named(fields) => derive_named_fields(struct_name, &fields)?,
-        Fields::Unnamed(fields) => derive_unnamed_fields(struct_name, &fields)?,
+        Fields::Named(fields) => derive_named_fields(struct_name, fields)?,
+        Fields::Unnamed(fields) => derive_unnamed_fields(struct_name, fields)?,
         Fields::Unit => {
             return Err(SynError::new(
                 input.span(),

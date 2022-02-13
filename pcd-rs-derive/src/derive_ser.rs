@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{format_ident, quote};
 use regex::Regex;
 use syn::{
     spanned::Spanned, Attribute, Data, DeriveInput, Fields, FieldsNamed, Ident, Lit, Meta,
@@ -43,7 +43,7 @@ pub fn f_pcd_record_write_derive(input: DeriveInput) -> syn::Result<TokenStream>
         bin_write_tokens,
         text_write_tokens,
     } = match &data.fields {
-        Fields::Named(fields) => derive_named_fields(struct_name, &fields)?,
+        Fields::Named(fields) => derive_named_fields(struct_name, fields)?,
         Fields::Unnamed(_) => {
             return Err(syn::Error::new(
                 input.span(),

@@ -3,9 +3,9 @@
 //! This crate allows you to read and write PCD point cloud.
 
 #[doc(hidden)]
-pub extern crate anyhow;
+pub use anyhow;
 #[doc(hidden)]
-pub extern crate byteorder;
+pub use byteorder;
 
 pub mod error;
 pub mod metas;
