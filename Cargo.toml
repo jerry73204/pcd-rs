@@ -21,5 +21,11 @@ byteorder = "1.4.3"
 anyhow = "1.0.53"
 thiserror = "1.0.30"
 regex = "1.5.4"
-pcd-rs-derive = { version = "0.5.1", path = "pcd-rs-derive" }
+pcd-rs-derive = { version = "0.5.1", path = "pcd-rs-derive", optional = true }
 num-traits = "0.2.14"
+
+[features]
+derive = ["pcd-rs-derive"]
+
+[dev-dependencies]
+itertools = "0.10.3"

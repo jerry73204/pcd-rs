@@ -17,6 +17,7 @@ pub mod writer;
 
 pub use error::Error;
 pub use metas::{DataKind, FieldDef, PcdMeta, Schema, TypeKind, ValueKind, ViewPoint};
+#[cfg(feature = "derive")]
 pub use pcd_rs_derive::{PcdDeserialize, PcdSerialize};
 pub use reader::{DynReader, Reader};
 pub use record::{DynRecord, Field, PcdDeserialize, PcdSerialize};
