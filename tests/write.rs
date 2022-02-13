@@ -1,9 +1,10 @@
 #![cfg(feature = "derive")]
 
 use anyhow::Result;
+use itertools::Itertools as _;
 use pcd_rs::{
-    DataKind, DynRecord, Field, PcdDeserialize, PcdSerialize, Reader, ReaderBuilder, ValueKind,
-    Writer, WriterBuilder,
+    DataKind, DynRecord, Field, PcdDeserialize, PcdSerialize, Reader, Schema, ValueKind, Writer,
+    WriterInit,
 };
 
 #[derive(Debug, PcdDeserialize, PcdSerialize, PartialEq)]
@@ -35,17 +36,23 @@ fn write_ascii_static() -> Result<()> {
         },
     ];
 
-    let mut writer: Writer<Point, _> =
-        WriterBuilder::new(300, 1, Default::default(), DataKind::ASCII)?.create(path)?;
+    let mut writer = WriterInit {
+        width: 300,
+        height: 1,
+        viewpoint: Default::default(),
+        data_kind: DataKind::Ascii,
+        schema: None,
+    }
+    .create(path)?;
 
-    for point in dump_points.iter() {
-        writer.push(&point)?;
+    for point in &dump_points {
+        writer.push(point)?;
     }
 
     writer.finish()?;
 
-    let reader: Reader<Point, _> = ReaderBuilder::from_path(path)?;
-    let load_points = reader.collect::<Result<Vec<_>>>()?;
+    let reader = Reader::open(path)?;
+    let load_points: Vec<Point> = reader.try_collect()?;
 
     assert_eq!(dump_points, load_points);
     std::fs::remove_file(path)?;
@@ -75,17 +82,23 @@ fn write_binary_static() -> Result<()> {
         },
     ];
 
-    let mut writer: Writer<Point, _> =
-        WriterBuilder::new(300, 1, Default::default(), DataKind::Binary)?.create(path)?;
+    let mut writer = WriterInit {
+        width: 300,
+        height: 1,
+        viewpoint: Default::default(),
+        data_kind: DataKind::Binary,
+        schema: None,
+    }
+    .create(path)?;
 
-    for point in dump_points.iter() {
-        writer.push(&point)?;
+    for point in &dump_points {
+        writer.push(point)?;
     }
 
     writer.finish()?;
 
-    let reader: Reader<Point, _> = ReaderBuilder::from_path(path)?;
-    let load_points = reader.collect::<Result<Vec<_>>>()?;
+    let reader = Reader::open(path)?;
+    let load_points: Vec<Point> = reader.try_collect()?;
 
     assert_eq!(dump_points, load_points);
     std::fs::remove_file(path)?;
@@ -114,24 +127,28 @@ fn write_ascii_untyped() -> Result<()> {
         ]),
     ];
 
-    let schema = vec![
+    let schema = Schema::from_iter([
         ("x", ValueKind::F32, 1),
         ("y", ValueKind::U8, 3),
         ("z", ValueKind::I32, 1),
-    ];
+    ]);
 
-    let mut writer: Writer<DynRecord, _> =
-        WriterBuilder::new(300, 1, Default::default(), DataKind::ASCII)?
-            .schema(schema)?
-            .create(path)?;
+    let mut writer = WriterInit {
+        width: 300,
+        height: 1,
+        viewpoint: Default::default(),
+        data_kind: DataKind::Ascii,
+        schema: Some(schema),
+    }
+    .create(path)?;
 
-    for point in dump_points.iter() {
-        writer.push(&point)?;
+    for point in &dump_points {
+        writer.push(point)?;
     }
 
     writer.finish()?;
 
-    let reader: Reader<DynRecord, _> = ReaderBuilder::from_path(path)?;
+    let reader: Reader<DynRecord, _> = Reader::open(path)?;
     let load_points = reader.collect::<Result<Vec<_>>>()?;
 
     assert_eq!(dump_points, load_points);
@@ -162,25 +179,29 @@ fn write_binary_untyped() -> Result<()> {
         ]),
     ];
 
-    let schema = vec![
+    let schema = Schema::from_iter([
         ("x", ValueKind::F32, 1),
         ("y", ValueKind::U8, 3),
         ("z", ValueKind::I32, 1),
-    ];
+    ]);
 
-    let mut writer: Writer<DynRecord, _> =
-        WriterBuilder::new(300, 1, Default::default(), DataKind::Binary)?
-            .schema(schema)?
-            .create(path)?;
+    let mut writer = WriterInit {
+        width: 300,
+        height: 1,
+        viewpoint: Default::default(),
+        data_kind: DataKind::Binary,
+        schema: Some(schema),
+    }
+    .create(path)?;
 
-    for point in dump_points.iter() {
-        writer.push(&point)?;
+    for point in &dump_points {
+        writer.push(point)?;
     }
 
     writer.finish()?;
 
-    let reader: Reader<DynRecord, _> = ReaderBuilder::from_path(path)?;
-    let load_points = reader.collect::<Result<Vec<_>>>()?;
+    let reader = Reader::open(path)?;
+    let load_points: Vec<DynRecord> = reader.try_collect()?;
 
     assert_eq!(dump_points, load_points);
     std::fs::remove_file(path)?;
