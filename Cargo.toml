@@ -22,3 +22,4 @@ anyhow = "1.0.40"
 thiserror = "1.0.24"
 regex = "1.5.4"
 pcd-rs-derive = { version = "0.5.0", path = "pcd-rs-derive" }
+num-traits = "0.2.14"
