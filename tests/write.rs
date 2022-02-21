@@ -9,7 +9,7 @@ use pcd_rs::{
 
 #[derive(Debug, PcdDeserialize, PcdSerialize, PartialEq)]
 pub struct Point {
-    #[pcd_rename("new_x")]
+    #[pcd(rename = "new_x")]
     x: f32,
     y: [u8; 3],
     z: i32,

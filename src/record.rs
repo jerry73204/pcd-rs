@@ -40,9 +40,9 @@
 //!     x: f32,
 //!     y: f32,
 //!     z: f32,
-//!     #[pcd_rename("true_name")]
+//!     #[pcd(rename = "true_name")]
 //!     rust_name: u32,
-//!     #[pcd_ignore_name]
+//!     #[pcd(ignore)]
 //!     whatever_name: u32,
 //! }
 //! ```

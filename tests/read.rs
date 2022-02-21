@@ -6,7 +6,7 @@ use pcd_rs::{DynRecord, PcdDeserialize, Reader};
 
 #[derive(PcdDeserialize)]
 pub struct PointAscii {
-    #[pcd_ignore_name]
+    #[pcd(ignore)]
     pub x: f32,
     pub y: f32,
     pub z: f32,
@@ -18,7 +18,7 @@ pub struct PointBinary {
     pub x: f32,
     pub y: f32,
     pub z: f32,
-    #[pcd_ignore_name]
+    #[pcd(ignore)]
     pub rgb: u32,
 }
 

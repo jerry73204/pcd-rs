@@ -1,10 +1,8 @@
-use crate::parse::ItemStruct;
+use crate::{common::*, parse::ItemStruct, utils::parse_field_attributes};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use regex::Regex;
 use syn::{
-    punctuated::Punctuated, spanned::Spanned, token, Attribute, Field, Ident, Lit, Meta,
-    NestedMeta, Type, TypeArray, TypePath,
+    punctuated::Punctuated, spanned::Spanned, token, Field, Ident, Type, TypeArray, TypePath,
 };
 
 struct DerivedTokens {
@@ -55,7 +53,7 @@ fn derive_named_fields(
     struct_name: &Ident,
     fields: &Punctuated<Field, token::Comma>,
 ) -> syn::Result<DerivedTokens> {
-    let (field_idents, write_specs, bin_write_fields, text_write_fields) = fields
+    let fields: Vec<_> = fields
         .iter()
         .enumerate()
         .map(|(field_index, field)| {
@@ -65,11 +63,14 @@ fn derive_named_fields(
             );
             let field_ident = format_ident!("{}", &field.ident.as_ref().unwrap());
 
-            let rename_opt = parse_field_attributes(&field.attrs)?;
-            let pcd_name = if let Some(name) = rename_opt {
-                name
-            } else {
-                field_ident.to_string()
+            let pcd_name = {
+                let opts = parse_field_attributes(&field.attrs)?;
+
+                match (opts.ignore, opts.rename) {
+                    (true, _) => None,
+                    (false, None) => Some(field_ident.to_string()),
+                    (false, Some(rename)) => Some(rename),
+                }
             };
 
             let tokens = match &field.ty {
@@ -82,25 +83,20 @@ fn derive_named_fields(
 
             Ok((field_ident, pcd_name, tokens))
         })
-        .collect::<syn::Result<Vec<_>>>()?
+        .try_collect()?;
+
+    let (field_idents, write_specs, bin_write_fields, text_write_fields) = fields
         .into_iter()
-        .fold(
-            (vec![], vec![], vec![], vec![]),
-            |(mut field_idents, mut write_specs, mut bin_write_fields, mut text_write_fields),
-             (field_ident, pcd_name, tokens)| {
-                let write_spec_tokens = tokens.write_spec_tokens;
-                field_idents.push(field_ident);
-                write_specs.push(quote! { (#pcd_name.to_owned(), #write_spec_tokens) });
-                bin_write_fields.push(tokens.bin_write_tokens);
-                text_write_fields.push(tokens.text_write_tokens);
-                (
-                    field_idents,
-                    write_specs,
-                    bin_write_fields,
-                    text_write_fields,
-                )
-            },
-        );
+        .map(|(field_ident, pcd_name, tokens)| {
+            let write_spec_tokens = tokens.write_spec_tokens;
+            (
+                field_ident,
+                quote! { (#pcd_name.to_owned(), #write_spec_tokens) },
+                tokens.bin_write_tokens,
+                tokens.text_write_tokens,
+            )
+        })
+        .unzip_n_vec();
 
     let write_spec_tokens = quote! {
         vec![#(#write_specs),*]
@@ -252,63 +248,4 @@ fn make_rw_expr(type_ident: &Ident) -> Option<DerivedTokens> {
     };
 
     Some(derived_tokens)
-}
-
-fn parse_field_attributes(attrs: &[Attribute]) -> syn::Result<Option<String>> {
-    let name_regex = Regex::new(r"^[[:word:]]+$").unwrap();
-
-    let rename_opt = attrs
-        .iter()
-        .filter_map(|attr| {
-            let attr_ident = attr.path.get_ident()?;
-            Some((attr, attr_ident))
-        })
-        .fold(Ok(None), |result, (attr, attr_ident)| -> syn::Result<_> {
-            let name_opt = result?;
-            let attr_ident_name = attr_ident.to_string();
-
-            match attr_ident_name.as_str() {
-                "pcd_rename" => {
-                    if name_opt.is_some() {
-                        let error = syn::Error::new(
-                            attr.span(),
-                            r#""pcd_rename" cannot be specified more than once."#,
-                        );
-                        return Err(error);
-                    }
-
-                    let format_error = syn::Error::new(
-                        attr.span(),
-                        r#"The attribute must be in form of #[pcd_rename("...")]."#,
-                    );
-                    let name = match attr.parse_meta()? {
-                        Meta::List(meta_list) => {
-                            if meta_list.nested.len() != 1 {
-                                return Err(format_error);
-                            }
-
-                            let nested = &meta_list.nested[0];
-
-                            if let NestedMeta::Lit(Lit::Str(litstr)) = nested {
-                                let name = litstr.value();
-                                let error = syn::Error::new(
-                                    litstr.span(),
-                                    "The name argument must be composed of word characters.",
-                                );
-                                name_regex.find(&name).ok_or(error)?;
-                                name
-                            } else {
-                                return Err(format_error);
-                            }
-                        }
-                        _ => return Err(format_error),
-                    };
-
-                    Ok(Some(name))
-                }
-                _ => Ok(name_opt),
-            }
-        })?;
-
-    Ok(rename_opt)
 }
