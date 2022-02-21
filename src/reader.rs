@@ -4,28 +4,31 @@
 //! [Iterator](std::iter::Iterator) interface. The points are stored in
 //! types implementing [PcdDeserialize](crate::record::PcdDeserialize) trait.
 //! See [record](crate::record) moduel doc to implement your own point type.
-//!
-//! ```rust
-//! use anyhow::Result;
-//! use pcd_rs::{PcdDeserialize, Reader};
-//! use std::path::Path;
-//!
-//! #[derive(PcdDeserialize)]
-//! pub struct Point {
-//!     x: f32,
-//!     y: f32,
-//!     z: f32,
-//!     rgb: f32,
-//! }
-//!
-//! fn main() -> Result<()> {
-//!     let reader = Reader::open("test_files/ascii.pcd")?;
-//!     let points: Result<Vec<Point>> = reader.collect();
-//!     assert_eq!(points?.len(), 213);
-//!     Ok(())
-//! }
-//! ```
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+```rust
+use anyhow::Result;
+use pcd_rs::{PcdDeserialize, Reader};
+use std::path::Path;
 
+#[derive(PcdDeserialize)]
+pub struct Point {
+    x: f32,
+    y: f32,
+    z: f32,
+    rgb: f32,
+}
+
+fn main() -> Result<()> {
+    let reader = Reader::open("test_files/ascii.pcd")?;
+    let points: Result<Vec<Point>> = reader.collect();
+    assert_eq!(points?.len(), 213);
+    Ok(())
+}
+```
+"##
+)]
 use crate::{
     error::Error,
     metas::{DataKind, FieldDef, PcdMeta},

@@ -29,3 +29,12 @@ derive = ["pcd-rs-derive"]
 
 [dev-dependencies]
 itertools = "0.10.3"
+
+
+[[example]]
+name = "write_static"
+required-features = ["derive"]
+
+[[example]]
+name = "read_static"
+required-features = ["derive"]

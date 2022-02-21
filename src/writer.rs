@@ -4,41 +4,45 @@
 //! PCD file or writer given by user. The written point type must implement
 //! [PcdSerialize](crate::record::PcdSerialize) trait.
 //! See [record](crate::record) moduel doc to implement your own point type.
-//!
-//! ```rust
-//! use anyhow::Result;
-//! use pcd_rs::{DataKind, PcdSerialize, Writer, WriterInit};
-//! use std::path::Path;
-//!
-//! #[derive(PcdSerialize)]
-//! pub struct Point {
-//!     x: f32,
-//!     y: f32,
-//!     z: f32,
-//! }
-//!
-//! fn main() -> Result<()> {
-//!     let mut writer: Writer<Point, _> = WriterInit {
-//!         height: 300,
-//!         width: 1,
-//!         viewpoint: Default::default(),
-//!         data_kind: DataKind::Ascii,
-//!         schema: None,
-//!     }
-//!     .create("test_files/dump.pcd")?;
-//!
-//!     let point = Point {
-//!         x: 3.14159,
-//!         y: 2.71828,
-//!         z: -5.0,
-//!     };
-//!
-//!     writer.push(&point)?;
-//!     writer.finish()?;
-//!     Ok(())
-//! }
-//! ```
 
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+```rust
+use anyhow::Result;
+use pcd_rs::{DataKind, PcdSerialize, Writer, WriterInit};
+use std::path::Path;
+
+#[derive(PcdSerialize)]
+pub struct Point {
+    x: f32,
+    y: f32,
+    z: f32,
+}
+
+fn main() -> Result<()> {
+    let mut writer: Writer<Point, _> = WriterInit {
+        height: 300,
+        width: 1,
+        viewpoint: Default::default(),
+        data_kind: DataKind::Ascii,
+        schema: None,
+    }
+    .create("test_files/dump.pcd")?;
+
+    let point = Point {
+        x: 3.14159,
+        y: 2.71828,
+        z: -5.0,
+    };
+
+    writer.push(&point)?;
+    writer.finish()?;
+    Ok(())
+}
+```
+"##
+)]
 use crate::{
     metas::{DataKind, FieldDef, Schema, ValueKind, ViewPoint},
     record::{DynRecord, PcdSerialize},

@@ -3,8 +3,7 @@
 use anyhow::Result;
 use itertools::Itertools as _;
 use pcd_rs::{
-    DataKind, DynRecord, Field, PcdDeserialize, PcdSerialize, Reader, Schema, ValueKind, Writer,
-    WriterInit,
+    DataKind, DynRecord, Field, PcdDeserialize, PcdSerialize, Reader, Schema, ValueKind, WriterInit,
 };
 
 #[derive(Debug, PcdDeserialize, PcdSerialize, PartialEq)]

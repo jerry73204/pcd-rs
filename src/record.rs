@@ -1,52 +1,63 @@
-//! Defines serializing and deserializing traits and common record types.
-//!
-//! Any object scanned by readers or written by writers must implement
-//! [PcdDeserialize](crate::record::PcdDeserialize) or [PcdSerialize](crate::record::PcdSerialize)
-//! respectively.
-//!
-//! These traits are not intended to implemented manually.
-//! Please use derive macro instead. For example,
-//!
-//! ```rust
-//! use pcd_rs::{PcdDeserialize, PcdSerialize};
-//!
-//! #[derive(PcdDeserialize, PcdSerialize)]
-//! pub struct TimestampedPoint {
-//!     x: f32,
-//!     y: f32,
-//!     z: f32,
-//!     timestamp: u32,
-//! }
-//! ```
-//!
-//! The derive macro accepts normal structs and tuple structs, but does not accept unit structs.
-//!
-//! [PcdDeserialize](crate::record::PcdDeserialize) allows fields with either primitive type,
-//! array of primitive type or [Vec](<std::vec::Vec>) of primitive type.
-//!
-//! [PcdSerialize](crate::record::PcdSerialize) allows fields with either primitive type or
-//! array of primitive type. The [Vec](<std::vec::Vec>) is ruled out since the length
-//! is not determined in compile-time.
-//!
-//! Make sure struct field names match the `FIELDS` header in PCD data.
-//! Otherwise it panics at runtime. You can specify the exact name in header or bypass name check
-//! with attributes. The name check are automatically disabled for tuple structs.
-//!
-//! ```rust
-//! use pcd_rs::PcdDeserialize;
-//!
-//! #[derive(PcdDeserialize)]
-//! pub struct TimestampedPoint {
-//!     x: f32,
-//!     y: f32,
-//!     z: f32,
-//!     #[pcd(rename = "true_name")]
-//!     rust_name: u32,
-//!     #[pcd(ignore)]
-//!     whatever_name: u32,
-//! }
-//! ```
+#[doc = r##"
+Defines serializing and deserializing traits and common record types.
 
+Any object scanned by readers or written by writers must implement
+[PcdDeserialize](crate::record::PcdDeserialize) or [PcdSerialize](crate::record::PcdSerialize)
+respectively.
+
+These traits are not intended to implemented manually.
+Please use derive macro instead. For example,
+
+"##]
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+```rust
+use pcd_rs::{PcdDeserialize, PcdSerialize};
+
+#[derive(PcdDeserialize, PcdSerialize)]
+pub struct TimestampedPoint {
+    x: f32,
+    y: f32,
+    z: f32,
+    timestamp: u32,
+}
+```
+"##
+)]
+#[doc = r##"
+The derive macro accepts normal structs and tuple structs, but does not accept unit structs.
+
+[PcdDeserialize](crate::record::PcdDeserialize) allows fields with either primitive type,
+array of primitive type or [Vec](<std::vec::Vec>) of primitive type.
+
+[PcdSerialize](crate::record::PcdSerialize) allows fields with either primitive type or
+array of primitive type. The [Vec](<std::vec::Vec>) is ruled out since the length
+is not determined in compile-time.
+
+Make sure struct field names match the `FIELDS` header in PCD data.
+Otherwise it panics at runtime. You can specify the exact name in header or bypass name check
+with attributes. The name check are automatically disabled for tuple structs.
+"##]
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+```rust
+use pcd_rs::PcdDeserialize;
+
+#[derive(PcdDeserialize)]
+pub struct TimestampedPoint {
+    x: f32,
+    y: f32,
+    z: f32,
+    #[pcd(rename = "true_name")]
+    rust_name: u32,
+    #[pcd(ignore)]
+    whatever_name: u32,
+}
+```
+"##
+)]
 use crate::{
     error::Error,
     metas::{FieldDef, Schema, ValueKind},
