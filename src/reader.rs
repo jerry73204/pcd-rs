@@ -4,7 +4,7 @@
 //! [Iterator](std::iter::Iterator) interface. The points are stored in
 //! types implementing [PcdDeserialize](crate::record::PcdDeserialize) trait.
 //! See [record](crate::record) moduel doc to implement your own point type.
-#[cfg_attr(
+#![cfg_attr(
     feature = "derive",
     doc = r##"
 ```rust
@@ -29,6 +29,7 @@ fn main() -> Result<()> {
 ```
 "##
 )]
+
 use crate::{
     error::Error,
     metas::{DataKind, FieldDef, PcdMeta},

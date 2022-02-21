@@ -4,8 +4,7 @@
 //! PCD file or writer given by user. The written point type must implement
 //! [PcdSerialize](crate::record::PcdSerialize) trait.
 //! See [record](crate::record) moduel doc to implement your own point type.
-
-#[cfg_attr(
+#![cfg_attr(
     feature = "derive",
     doc = r##"
 ```rust
@@ -46,6 +45,7 @@ fn main() -> Result<()> {
 ```
 "##
 )]
+
 use crate::{
     metas::{DataKind, FieldDef, Schema, ValueKind, ViewPoint},
     record::{DynRecord, PcdSerialize},

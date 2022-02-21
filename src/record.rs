@@ -1,4 +1,4 @@
-#[doc = r##"
+#![doc = r##"
 Defines serializing and deserializing traits and common record types.
 
 Any object scanned by readers or written by writers must implement
@@ -9,7 +9,7 @@ These traits are not intended to implemented manually.
 Please use derive macro instead. For example,
 
 "##]
-#[cfg_attr(
+#![cfg_attr(
     feature = "derive",
     doc = r##"
 ```rust
@@ -25,7 +25,7 @@ pub struct TimestampedPoint {
 ```
 "##
 )]
-#[doc = r##"
+#![doc = r##"
 The derive macro accepts normal structs and tuple structs, but does not accept unit structs.
 
 [PcdDeserialize](crate::record::PcdDeserialize) allows fields with either primitive type,
@@ -39,7 +39,7 @@ Make sure struct field names match the `FIELDS` header in PCD data.
 Otherwise it panics at runtime. You can specify the exact name in header or bypass name check
 with attributes. The name check are automatically disabled for tuple structs.
 "##]
-#[cfg_attr(
+#![cfg_attr(
     feature = "derive",
     doc = r##"
 ```rust

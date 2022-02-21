@@ -4,10 +4,11 @@ use syn::{
     braced, parenthesized,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    token, Error, Field, Ident, LitStr, Result, Token, Visibility,
+    token, Attribute, Error, Field, Ident, LitStr, Result, Token, Visibility,
 };
 
 pub struct ItemStruct {
+    pub attrs: Vec<Attribute>,
     pub vis: Visibility,
     pub struct_token: Token![struct],
     pub ident: Ident,
@@ -19,6 +20,7 @@ impl Parse for ItemStruct {
     fn parse(input: ParseStream) -> Result<Self> {
         let content;
         Ok(ItemStruct {
+            attrs: input.call(Attribute::parse_outer)?,
             vis: input.parse()?,
             struct_token: input.parse()?,
             ident: input.parse()?,
