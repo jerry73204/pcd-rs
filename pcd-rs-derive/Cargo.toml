@@ -1,6 +1,6 @@
 [package]
 name = "pcd-rs-derive"
-version = "0.6.0"
+version = "0.6.1"
 authors = ["jerry73204 <jerry73204@gmail.com>"]
 edition = "2021"
 description = "Derive macros for pcd-rs crate"
