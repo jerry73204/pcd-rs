@@ -78,7 +78,7 @@ fn derive_named_fields(
             );
             let field_ident = format_ident!("{}", &field.ident.as_ref().unwrap());
 
-            // Check #[pcd_rename(...)] and #[pcd_ignore_name] attributes
+            // Check #[pcd(...)] options
             let pcd_name_opt = {
                 let opts = parse_field_attributes(&field.attrs)?;
 
