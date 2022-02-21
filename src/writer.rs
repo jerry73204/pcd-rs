@@ -38,6 +38,9 @@ fn main() -> Result<()> {
 
     writer.push(&point)?;
     writer.finish()?;
+
+#  std::fs::remove("test_files/dump.pcd").unwrap();
+
     Ok(())
 }
 ```
