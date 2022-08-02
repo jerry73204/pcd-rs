@@ -413,6 +413,9 @@ impl PcdDeserialize for DynRecord {
     }
 
     fn read_chunk<R: BufRead>(reader: &mut R, field_defs: &Schema) -> Result<Self> {
+        use Field as F;
+        use ValueKind as K;
+
         let fields = field_defs
             .iter()
             .map(|def| {
@@ -421,60 +424,59 @@ impl PcdDeserialize for DynRecord {
                 let counter = 0..count;
 
                 let field = match kind {
-                    ValueKind::I8 => {
+                    K::I8 => {
                         let values = counter
                             .map(|_| Ok(reader.read_i8()?))
                             .collect::<Result<Vec<_>>>()?;
-                        Field::I8(values)
+                        F::I8(values)
                     }
-                    ValueKind::I16 => {
+                    K::I16 => {
                         let values = counter
                             .map(|_| Ok(reader.read_i16::<LittleEndian>()?))
                             .collect::<Result<Vec<_>>>()?;
-                        Field::I16(values)
+                        F::I16(values)
                     }
-                    ValueKind::I32 => {
+                    K::I32 => {
                         let values = counter
                             .map(|_| Ok(reader.read_i32::<LittleEndian>()?))
                             .collect::<Result<Vec<_>>>()?;
-                        Field::I32(values)
+                        F::I32(values)
                     }
-                    ValueKind::U8 => {
+                    K::U8 => {
                         let values = counter
                             .map(|_| Ok(reader.read_u8()?))
                             .collect::<Result<Vec<_>>>()?;
-                        Field::U8(values)
+                        F::U8(values)
                     }
-                    ValueKind::U16 => {
+                    K::U16 => {
                         let values = counter
                             .map(|_| Ok(reader.read_u16::<LittleEndian>()?))
                             .collect::<Result<Vec<_>>>()?;
-                        Field::U16(values)
+                        F::U16(values)
                     }
-                    ValueKind::U32 => {
+                    K::U32 => {
                         let values = counter
                             .map(|_| Ok(reader.read_u32::<LittleEndian>()?))
                             .collect::<Result<Vec<_>>>()?;
-                        Field::U32(values)
+                        F::U32(values)
                     }
-                    ValueKind::F32 => {
+                    K::F32 => {
                         let values = counter
                             .map(|_| Ok(reader.read_f32::<LittleEndian>()?))
                             .collect::<Result<Vec<_>>>()?;
-                        Field::F32(values)
+                        F::F32(values)
                     }
-                    ValueKind::F64 => {
+                    K::F64 => {
                         let values = counter
                             .map(|_| Ok(reader.read_f64::<LittleEndian>()?))
                             .collect::<Result<Vec<_>>>()?;
-                        Field::F64(values)
+                        F::F64(values)
                     }
                 };
 
                 Ok(field)
             })
             .collect::<Result<Vec<_>>>()?;
-
         Ok(Self(fields))
     }
 
