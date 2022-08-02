@@ -1,5 +1,8 @@
+//! Traits definitions.
+
 use crate::ValueKind;
 
+/// This trait assocaites Rust primitive types to PCD primitive types.
 pub trait Value
 where
     Self: Copy,
