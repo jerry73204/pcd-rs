@@ -7,7 +7,7 @@
 Add pcd-rs to your `Cargo.toml`.
 
 ```toml
-pcd_rs = "0.8.0"
+pcd-rs = "0.10.0"
 ```
 
 Please visit [docs.rs](https://docs.rs/pcd-rs/) to see detailed usage.
