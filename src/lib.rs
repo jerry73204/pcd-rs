@@ -12,6 +12,7 @@ pub mod metas;
 pub mod prelude;
 pub mod reader;
 pub mod record;
+pub mod traits;
 mod utils;
 pub mod writer;
 
