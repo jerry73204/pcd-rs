@@ -38,3 +38,6 @@ required-features = ["derive"]
 [[example]]
 name = "read_static"
 required-features = ["derive"]
+
+[package.metadata.docs.rs]
+features = ["derive"]
