@@ -22,4 +22,5 @@ pub use metas::{DataKind, FieldDef, PcdMeta, Schema, TypeKind, ValueKind, ViewPo
 pub use pcd_rs_derive::{PcdDeserialize, PcdSerialize};
 pub use reader::{DynReader, Reader};
 pub use record::{DynRecord, Field, PcdDeserialize, PcdSerialize};
+pub use traits::Value;
 pub use writer::{DynWriter, Writer, WriterInit};

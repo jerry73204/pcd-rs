@@ -61,10 +61,11 @@ pub struct TimestampedPoint {
 use crate::{
     error::Error,
     metas::{FieldDef, Schema, ValueKind},
+    traits::Value,
 };
 use anyhow::{bail, Result};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use num_traits::FromPrimitive;
+use num_traits::NumCast;
 use std::io::prelude::*;
 
 /// [PcdDeserialize](crate::record::PcdDeserialize) is analogous to a _point_ returned from a reader.
@@ -141,6 +142,52 @@ impl Field {
             F::F64(values) => values.len(),
         }
     }
+
+    pub fn to_value<T>(&self) -> Option<T>
+    where
+        T: Value + NumCast,
+    {
+        use Field as F;
+
+        if T::KIND != self.kind() {
+            return None;
+        }
+
+        Some(match self {
+            F::I8(v) => match &**v {
+                &[t] => T::from(t)?,
+                _ => return None,
+            },
+            F::I16(v) => match &**v {
+                &[t] => T::from(t)?,
+                _ => return None,
+            },
+            F::I32(v) => match &**v {
+                &[t] => T::from(t)?,
+                _ => return None,
+            },
+            F::U8(v) => match &**v {
+                &[t] => T::from(t)?,
+                _ => return None,
+            },
+            F::U16(v) => match &**v {
+                &[t] => T::from(t)?,
+                _ => return None,
+            },
+            F::U32(v) => match &**v {
+                &[t] => T::from(t)?,
+                _ => return None,
+            },
+            F::F32(v) => match &**v {
+                &[t] => T::from(t)?,
+                _ => return None,
+            },
+            F::F64(v) => match &**v {
+                &[t] => T::from(t)?,
+                _ => return None,
+            },
+        })
+    }
 }
 
 /// Represents an untyped _point_ in PCD data.
@@ -178,42 +225,51 @@ impl DynRecord {
             })
     }
 
-    pub fn xyz<T>(self) -> Option<[T; 3]>
+    pub fn to_xyz<T>(self) -> Option<[T; 3]>
     where
-        T: 'static + Copy + FromPrimitive,
+        T: Value + NumCast,
     {
-        let (x, y, z) = match &self.0[0..3] {
-            [Field::I8(x), Field::I8(y), Field::I8(z)] => {
-                (T::from_i8(x[0]), T::from_i8(y[0]), T::from_i8(z[0]))
-            }
-            [Field::I16(x), Field::I16(y), Field::I16(z)] => {
-                (T::from_i16(x[0]), T::from_i16(y[0]), T::from_i16(z[0]))
-            }
-            [Field::I32(x), Field::I32(y), Field::I32(z)] => {
-                (T::from_i32(x[0]), T::from_i32(y[0]), T::from_i32(z[0]))
-            }
-            [Field::U8(x), Field::U8(y), Field::U8(z)] => {
-                (T::from_u8(x[0]), T::from_u8(y[0]), T::from_u8(z[0]))
-            }
-            [Field::U16(x), Field::U16(y), Field::U16(z)] => {
-                (T::from_u16(x[0]), T::from_u16(y[0]), T::from_u16(z[0]))
-            }
-            [Field::U32(x), Field::U32(y), Field::U32(z)] => {
-                (T::from_u32(x[0]), T::from_u32(y[0]), T::from_u32(z[0]))
-            }
-            [Field::F32(x), Field::F32(y), Field::F32(z)] => {
-                (T::from_f32(x[0]), T::from_f32(y[0]), T::from_f32(z[0]))
-            }
-            [Field::F64(x), Field::F64(y), Field::F64(z)] => {
-                (T::from_f64(x[0]), T::from_f64(y[0]), T::from_f64(z[0]))
-            }
-            _ => panic!("Point info {:?} is not complete!", &self.0),
-        };
-        if let (Some(x), Some(y), Some(z)) = (x, y, z) {
-            Some([x, y, z])
-        } else {
-            None
+        use Field as F;
+
+        if self.0.first()?.kind() != T::KIND {
+            return None;
         }
+
+        Some(match &*self.0 {
+            [F::I8(xv), F::I8(yv), F::I8(zv), ..] => match (&**xv, &**yv, &**zv) {
+                (&[x], &[y], &[z]) => [T::from(x)?, T::from(y)?, T::from(z)?],
+                _ => return None,
+            },
+            [F::I16(xv), F::I16(yv), F::I16(zv), ..] => match (&**xv, &**yv, &**zv) {
+                (&[x], &[y], &[z]) => [T::from(x)?, T::from(y)?, T::from(z)?],
+                _ => return None,
+            },
+            [F::I32(xv), F::I32(yv), F::I32(zv), ..] => match (&**xv, &**yv, &**zv) {
+                (&[x], &[y], &[z]) => [T::from(x)?, T::from(y)?, T::from(z)?],
+                _ => return None,
+            },
+            [F::U8(xv), F::U8(yv), F::U8(zv), ..] => match (&**xv, &**yv, &**zv) {
+                (&[x], &[y], &[z]) => [T::from(x)?, T::from(y)?, T::from(z)?],
+                _ => return None,
+            },
+            [F::U16(xv), F::U16(yv), F::U16(zv), ..] => match (&**xv, &**yv, &**zv) {
+                (&[x], &[y], &[z]) => [T::from(x)?, T::from(y)?, T::from(z)?],
+                _ => return None,
+            },
+            [F::U32(xv), F::U32(yv), F::U32(zv), ..] => match (&**xv, &**yv, &**zv) {
+                (&[x], &[y], &[z]) => [T::from(x)?, T::from(y)?, T::from(z)?],
+                _ => return None,
+            },
+            [F::F32(xv), F::F32(yv), F::F32(zv), ..] => match (&**xv, &**yv, &**zv) {
+                (&[x], &[y], &[z]) => [T::from(x)?, T::from(y)?, T::from(z)?],
+                _ => return None,
+            },
+            [F::F64(xv), F::F64(yv), F::F64(zv), ..] => match (&**xv, &**yv, &**zv) {
+                (&[x], &[y], &[z]) => [T::from(x)?, T::from(y)?, T::from(z)?],
+                _ => return None,
+            },
+            _ => return None,
+        })
     }
 }
 
