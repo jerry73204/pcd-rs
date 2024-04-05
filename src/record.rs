@@ -225,7 +225,7 @@ impl DynRecord {
             })
     }
 
-    pub fn to_xyz<T>(self) -> Option<[T; 3]>
+    pub fn to_xyz<T>(&self) -> Option<[T; 3]>
     where
         T: Value + NumCast,
     {
