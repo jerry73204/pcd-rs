@@ -7,11 +7,7 @@ pub fn parse_field_attributes(attrs: &[Attribute]) -> syn::Result<Options> {
     {
         let options: Vec<_> = attrs
             .iter()
-            .filter_map(|attr| {
-                let ident = attr.path.get_ident()?;
-                let ok = ident == "pcd";
-                ok.then(|| attr)
-            })
+            .filter(|attr| attr.path().is_ident("pcd"))
             .map(|attr| {
                 if attr.style == AttrStyle::Outer {
                     Ok(attr)
@@ -24,7 +20,7 @@ pub fn parse_field_attributes(attrs: &[Attribute]) -> syn::Result<Options> {
             })
             .map(|attr| -> syn::Result<_> {
                 let attr = attr?;
-                let attr_list: AttrList = syn::parse2(attr.tokens.clone())?;
+                let attr_list: AttrList = attr.parse_args()?;
                 Ok(attr_list)
             })
             .try_collect()?;

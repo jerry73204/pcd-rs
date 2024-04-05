@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 use itertools::Itertools as _;
-use pcd_rs::{DynRecord, PcdDeserialize, Reader};
+use pcd_rs::{PcdDeserialize, Reader};
 
 #[derive(PcdDeserialize)]
 pub struct PointAscii {
@@ -23,7 +23,7 @@ pub struct PointBinary {
 }
 
 #[test]
-fn load_ascii_static() -> Result<()> {
+fn load_ascii_typed() -> Result<()> {
     let reader = Reader::open("test_files/ascii.pcd")?;
     let points: Vec<PointAscii> = reader.try_collect()?;
     assert_eq!(points.len(), 213);
@@ -31,25 +31,9 @@ fn load_ascii_static() -> Result<()> {
 }
 
 #[test]
-fn load_binary_static() -> Result<()> {
+fn load_binary_typed() -> Result<()> {
     let reader = Reader::open("test_files/binary.pcd")?;
     let points: Vec<PointBinary> = reader.try_collect()?;
-    assert_eq!(points.len(), 28944);
-    Ok(())
-}
-
-#[test]
-fn load_ascii_untyped() -> Result<()> {
-    let reader = Reader::open("test_files/ascii.pcd")?;
-    let points: Vec<DynRecord> = reader.try_collect()?;
-    assert_eq!(points.len(), 213);
-    Ok(())
-}
-
-#[test]
-fn load_binary_untyped() -> Result<()> {
-    let reader = Reader::open("test_files/binary.pcd")?;
-    let points: Vec<DynRecord> = reader.try_collect()?;
     assert_eq!(points.len(), 28944);
     Ok(())
 }

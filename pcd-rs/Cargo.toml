@@ -12,18 +12,18 @@ readme = "README.md"
 license-file = "LICENSE"
 
 [dependencies]
-byteorder = "1.4.3"
-anyhow = "1.0.59"
-thiserror = "1.0.31"
-regex = "1.6.0"
+byteorder = "1.5.0"
+anyhow = "1.0.81"
+thiserror = "1.0.58"
+regex = "1.10.4"
 pcd-rs-derive = { version = "0.6.1", path = "../pcd-rs-derive", optional = true }
-num-traits = "0.2.15"
+num-traits = "0.2.18"
 
 [features]
 derive = ["pcd-rs-derive"]
 
 [dev-dependencies]
-itertools = "0.10.3"
+itertools = "0.12.1"
 
 
 [[example]]

@@ -1,7 +1,7 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 use syn::{
-    braced, parenthesized,
+    braced,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     token, Attribute, Error, Field, Ident, LitStr, Result, Token, Visibility,
@@ -25,23 +25,19 @@ impl Parse for ItemStruct {
             struct_token: input.parse()?,
             ident: input.parse()?,
             brace_token: braced!(content in input),
-            fields: content.parse_terminated(Field::parse_named)?,
+            fields: content.parse_terminated(Field::parse_named, Token![,])?,
         })
     }
 }
 
 pub struct AttrList {
-    pub paren_token: token::Paren,
     pub options: Punctuated<AttrOption, Token![,]>,
 }
 
 impl Parse for AttrList {
     fn parse(input: ParseStream) -> Result<Self> {
-        let content;
-
         Ok(Self {
-            paren_token: parenthesized!(content in input),
-            options: content.parse_terminated(AttrOption::parse)?,
+            options: input.parse_terminated(AttrOption::parse, Token![,])?,
         })
     }
 }
