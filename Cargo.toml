@@ -1,43 +1,6 @@
-[package]
-name = "pcd-rs"
-version = "0.10.0"
-authors = ["jerry73204 <jerry73204@gmail.com>"]
-edition = "2021"
-description = "Working with PCD file format in Rust"
-categories = ["parsing"]
-documentation = "https://docs.rs/pcd-rs/"
-repository = "https://github.com/jerry73204/pcd-rs"
-homepage = "https://github.com/jerry73204/pcd-rs"
-readme = "README.md"
-license-file = "LICENSE"
-
 [workspace]
+resolver = "2"
 members = [
+    "pcd-rs",
     "pcd-rs-derive",
 ]
-
-[dependencies]
-byteorder = "1.4.3"
-anyhow = "1.0.59"
-thiserror = "1.0.31"
-regex = "1.6.0"
-pcd-rs-derive = { version = "0.6.1", path = "pcd-rs-derive", optional = true }
-num-traits = "0.2.15"
-
-[features]
-derive = ["pcd-rs-derive"]
-
-[dev-dependencies]
-itertools = "0.10.3"
-
-
-[[example]]
-name = "write_static"
-required-features = ["derive"]
-
-[[example]]
-name = "read_static"
-required-features = ["derive"]
-
-[package.metadata.docs.rs]
-features = ["derive"]
