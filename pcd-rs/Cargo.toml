@@ -1,6 +1,6 @@
 [package]
 name = "pcd-rs"
-version = "0.10.0"
+version = "0.11.0"
 authors = ["jerry73204 <jerry73204@gmail.com>"]
 edition = "2021"
 description = "Working with PCD file format in Rust"
@@ -16,7 +16,7 @@ byteorder = "1.5.0"
 anyhow = "1.0.81"
 thiserror = "1.0.58"
 regex = "1.10.4"
-pcd-rs-derive = { version = "0.6.1", path = "../pcd-rs-derive", optional = true }
+pcd-rs-derive = { version = "0.11.0", path = "../pcd-rs-derive", optional = true }
 num-traits = "0.2.18"
 
 [features]
