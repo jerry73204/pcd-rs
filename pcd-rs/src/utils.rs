@@ -78,14 +78,20 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
         let mut name_set = HashSet::new();
         let mut field_names: Vec<String> = vec![];
 
-        for tk in tokens[1..].iter() {
-            let field = tk;
-            if name_set.contains(field) {
+        for (idx, tk) in tokens[1..].iter().enumerate() {
+            let mut field = tk.clone();
+            // If this field is just an underscore, it was meant to be skipped. Label it as
+            // unknown_field_{idx}
+            if field == String::from("_") {
+                field = format!("unknown_field_{idx}");
+            }
+
+            if name_set.contains(&field.clone()) {
                 let desc = format!("field name {:?} is specified more than once", field);
                 return Err(Error::new_parse_error(*line_count, &desc).into());
             }
 
-            name_set.insert(field);
+            name_set.insert(field.clone());
             field_names.push(field.to_owned());
         }
 
