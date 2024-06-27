@@ -4,13 +4,13 @@
 
 ## Usage
 
-Add pcd-rs to your `Cargo.toml`.
+To add this crate to your project,
 
-```toml
-pcd_rs = "0.8.0"
+```bash
+cargo add pcd-rs
 ```
 
-Please visit [docs.rs](https://docs.rs/pcd-rs/) to see detailed usage.
+Please visit [docs.rs](https://docs.rs/pcd-rs/) to learn more about the usage.
 
 ## Examples
 
