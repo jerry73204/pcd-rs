@@ -13,17 +13,17 @@ license-file = "LICENSE"
 
 [dependencies]
 byteorder = "1.5.0"
-anyhow = "1.0.81"
-thiserror = "1.0.58"
-regex = "1.10.4"
+anyhow = "1.0.91"
+thiserror = "1.0.65"
+regex = "1.11.1"
 pcd-rs-derive = { version = "0.11.0", path = "../pcd-rs-derive", optional = true }
-num-traits = "0.2.18"
+num-traits = "0.2.19"
 
 [features]
 derive = ["pcd-rs-derive"]
 
 [dev-dependencies]
-itertools = "0.12.1"
+itertools = "0.13.0"
 
 
 [[example]]
