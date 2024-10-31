@@ -30,13 +30,13 @@ pub fn f_pcd_record_write_derive(item: ItemStruct) -> syn::Result<TokenStream> {
                 #write_spec_tokens
             }
 
-            fn write_chunk<R: std::io::Write>(&self, writer: &mut R, _: &::pcd_rs::metas::Schema) -> ::pcd_rs::anyhow::Result<()> {
+            fn write_chunk<R: std::io::Write>(&self, writer: &mut R, _: &::pcd_rs::metas::Schema) -> ::pcd_rs::Result<()> {
                 use ::pcd_rs::byteorder::{LittleEndian, WriteBytesExt};
                 { #bin_write_tokens };
                 Ok(())
             }
 
-            fn write_line<R: std::io::Write>(&self, writer: &mut R, _: &::pcd_rs::metas::Schema) -> ::pcd_rs::anyhow::Result<()> {
+            fn write_line<R: std::io::Write>(&self, writer: &mut R, _: &::pcd_rs::metas::Schema) -> ::pcd_rs::Result<()> {
                 let mut tokens = Vec::<String>::new();
                 { #text_write_tokens };
                 let line = tokens.join(" ");

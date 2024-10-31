@@ -1,4 +1,4 @@
-use anyhow::Result;
+use eyre::Result;
 use itertools::Itertools as _;
 use pcd_rs::{DataKind, DynRecord, Field, Reader, Schema, ValueKind, WriterInit};
 
@@ -45,9 +45,9 @@ fn write_ascii_untyped() -> Result<()> {
     writer.finish()?;
 
     let reader: Reader<DynRecord, _> = Reader::open(path)?;
-    let load_points = reader.collect::<Result<Vec<_>>>()?;
+    let load_points: Result<Vec<DynRecord>, _> = reader.collect();
 
-    assert_eq!(dump_points, load_points);
+    assert_eq!(dump_points, load_points?);
     std::fs::remove_file(path)?;
 
     Ok(())

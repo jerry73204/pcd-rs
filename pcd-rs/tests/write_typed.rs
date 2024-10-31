@@ -1,8 +1,8 @@
 #![cfg(feature = "derive")]
 
-use anyhow::Result;
+use eyre::Result;
 use itertools::Itertools as _;
-use pcd_rs::{DataKind, Field, PcdDeserialize, PcdSerialize, Reader, WriterInit};
+use pcd_rs::{DataKind, PcdDeserialize, PcdSerialize, Reader, WriterInit};
 
 #[derive(Debug, PcdDeserialize, PcdSerialize, PartialEq)]
 pub struct Point {

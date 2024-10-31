@@ -25,8 +25,7 @@
 //! [Result\<DynRecord\>](DynRecord).
 //!
 //! ```rust
-//! # use anyhow::Result;
-//! # fn main() -> Result<()>  {
+//! # fn main() -> pcd_rs::pcd_rsResult<()>  {
 //! use pcd_rs::DynReader;
 //!
 //! // Declare the reader
@@ -48,8 +47,7 @@
 //! [.finish()](DynWriter::finish) in the end.
 //!
 //! ```rust
-//! # use anyhow::Result;
-//! # fn main() -> Result<()>  {
+//! # fn main() -> pcd_rs::pcd_rs::Result<()>  {
 //! use pcd_rs::{DataKind, DynRecord, DynWriter, Field, Schema, ValueKind, WriterInit};
 //!
 //! // Declare point data
@@ -117,8 +115,7 @@ the writer. The writer must be finished by [.finish()](Writer::finish)
 in the end.
 
 ```rust
-# use anyhow::Result;
-# pub fn main() -> Result<()> {
+# pub fn main() -> pcd_rs::Result<()> {
 use pcd_rs::{PcdDeserialize, Reader};
 
 #[derive(PcdDeserialize)]
@@ -142,8 +139,7 @@ The writer is configured by [WriterInit] and then created by
 [WriterInit::create()].
 
 ```rust
-# use anyhow::Result;
-# pub fn main() -> Result<()> {
+# pub fn main() -> pcd_rs::Result<()> {
 use pcd_rs::{DataKind, PcdDeserialize, PcdSerialize, WriterInit};
 
 #[derive(PcdSerialize)]
@@ -203,8 +199,6 @@ attributes.
 )]
 
 #[doc(hidden)]
-pub use anyhow;
-#[doc(hidden)]
 pub use byteorder;
 
 pub mod error;
@@ -216,7 +210,7 @@ pub mod traits;
 mod utils;
 pub mod writer;
 
-pub use error::Error;
+pub use error::{Error, Result};
 pub use metas::{DataKind, FieldDef, PcdMeta, Schema, TypeKind, ValueKind, ViewPoint};
 #[cfg(feature = "derive")]
 pub use pcd_rs_derive::{PcdDeserialize, PcdSerialize};

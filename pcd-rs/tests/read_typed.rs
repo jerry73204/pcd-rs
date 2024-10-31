@@ -1,6 +1,6 @@
 #![cfg(feature = "derive")]
 
-use anyhow::Result;
+use eyre::Result;
 use itertools::Itertools as _;
 use pcd_rs::{PcdDeserialize, Reader};
 

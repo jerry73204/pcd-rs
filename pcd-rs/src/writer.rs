@@ -8,7 +8,7 @@
     feature = "derive",
     doc = r##"
 ```rust
-use anyhow::Result;
+use eyre::Result;
 use pcd_rs::{DataKind, PcdSerialize, Writer, WriterInit};
 use std::path::Path;
 
@@ -49,8 +49,8 @@ fn main() -> Result<()> {
 use crate::{
     metas::{DataKind, FieldDef, Schema, ValueKind, ViewPoint},
     record::{DynRecord, PcdSerialize},
+    Error, Result,
 };
-use anyhow::{bail, ensure, Result};
 use std::{
     collections::HashSet,
     fs::File,
@@ -78,25 +78,25 @@ impl WriterInit {
     pub fn build_from_writer<Record: PcdSerialize, W: Write + Seek>(
         self,
         writer: W,
-    ) -> Result<Writer<Record, W>> {
-        let record_spec = match (Record::is_dynamic(), self.schema) {
-            (true, Some(schema)) => {
-                let names: Result<HashSet<_>> = schema
-                    .iter()
-                    .cloned()
-                    .map(|FieldDef { name, count, .. }| {
-                        ensure!(!name.is_empty(), "field name must not be empty");
-                        ensure!(count > 0, "count must not be zero");
-                        Ok(name)
-                    })
-                    .collect();
-                ensure!(names?.len() == schema.len(), "schema names must be unique");
-                schema
+    ) -> Result<Writer<Record, W>, Error> {
+        let record_spec = if Record::is_dynamic() {
+            // Check if the schema is set.
+            let Some(schema) = self.schema else {
+                return Err(Error::new_invalid_writer_configuration_error(
+                    "The schema is not set on the writer. It is required for the dynamic record type."
+                ));
+            };
+
+            schema
+        } else {
+            if self.schema.is_some() {
+                return Err(Error::new_invalid_writer_configuration_error(
+                    "schema should not be set for static record type",
+                ));
             }
-            (true, None) => bail!("schema is not set "),
-            (false, Some(_schema)) => bail!("schema must not be set for static record type"),
-            (false, None) => Record::write_spec(),
+            Record::write_spec()
         };
+
         let seq_writer = Writer::new(
             self.width,
             self.height,
@@ -147,7 +147,30 @@ where
         viewpoint: ViewPoint,
         record_spec: Schema,
         mut writer: W,
-    ) -> Result<Self> {
+    ) -> Result<Self, Error> {
+        macro_rules! ensure {
+            ($cond:expr, $desc:expr) => {
+                if !$cond {
+                    return Err(Error::new_invalid_writer_configuration_error($desc));
+                }
+            };
+        }
+
+        // Run sanity check on the schema.
+        {
+            for FieldDef { name, count, .. } in &record_spec {
+                if name.is_empty() {}
+                ensure!(!name.is_empty(), "field name must not be empty");
+                ensure!(*count > 0, "The field count must be nonzero");
+            }
+
+            let names: HashSet<_> = record_spec.iter().map(|field| &field.name).collect();
+            ensure!(
+                names.len() == record_spec.len(),
+                "schema names must be unique"
+            );
+        }
+
         let (points_arg_begin, points_arg_width) = {
             let fields_args: Vec<_> = record_spec
                 .iter()

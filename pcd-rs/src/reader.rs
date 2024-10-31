@@ -8,7 +8,6 @@
     feature = "derive",
     doc = r##"
 ```rust
-use anyhow::Result;
 use pcd_rs::{PcdDeserialize, Reader};
 use std::path::Path;
 
@@ -20,7 +19,7 @@ pub struct Point {
     rgb: f32,
 }
 
-fn main() -> Result<()> {
+fn main() -> pcd_rs::Result<()> {
     let reader = Reader::open("test_files/ascii.pcd")?;
     let points: Result<Vec<Point>> = reader.collect();
     assert_eq!(points?.len(), 213);
@@ -34,8 +33,8 @@ use crate::{
     error::Error,
     metas::{DataKind, FieldDef, PcdMeta},
     record::{DynRecord, PcdDeserialize},
+    Result,
 };
-use anyhow::Result;
 use std::{
     fs::File,
     io::{prelude::*, BufReader, Cursor},
@@ -81,34 +80,40 @@ where
         if !Record::is_dynamic() {
             let record_spec = Record::read_spec();
 
-            let mismatch_error =
-                Error::new_schema_mismatch_error(record_spec.as_slice(), &meta.field_defs.fields);
-
-            if record_spec.len() != meta.field_defs.len() {
-                return Err(mismatch_error.into());
+            macro_rules! bail {
+                () => {
+                    return Err(Error::new_reader_schema_mismatch_error(
+                        record_spec.clone(),
+                        meta.field_defs.fields.clone(),
+                    ));
+                };
             }
 
-            for (record_field, meta_field) in record_spec.into_iter().zip(meta.field_defs.iter()) {
-                let (name_opt, record_kind, record_count_opt) = record_field;
+            if record_spec.len() != meta.field_defs.len() {
+                bail!();
+            }
+
+            for (record_field, meta_field) in record_spec.iter().zip(meta.field_defs.iter()) {
+                let (ref name_opt, record_kind, record_count_opt) = *record_field;
                 let FieldDef {
-                    name: meta_name,
+                    name: ref meta_name,
                     kind: meta_kind,
                     count: meta_count,
-                } = meta_field;
+                } = *meta_field;
 
-                if record_kind != *meta_kind {
-                    return Err(mismatch_error.into());
+                if record_kind != meta_kind {
+                    bail!();
                 }
 
                 if let Some(name) = &name_opt {
                     if name != meta_name {
-                        return Err(mismatch_error.into());
+                        bail!();
                     }
                 }
 
                 if let Some(record_count) = record_count_opt {
-                    if record_count != *meta_count as usize {
-                        return Err(mismatch_error.into());
+                    if record_count != meta_count as usize {
+                        bail!();
                     }
                 }
             }

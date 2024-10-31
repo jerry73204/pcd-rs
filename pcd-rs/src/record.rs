@@ -62,9 +62,10 @@ use crate::{
     error::Error,
     metas::{FieldDef, Schema, ValueKind},
     traits::Value,
+    Result,
 };
-use anyhow::{bail, Result};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use itertools::Itertools;
 use num_traits::NumCast;
 use std::io::prelude::*;
 
@@ -287,7 +288,10 @@ impl PcdSerialize for DynRecord {
         Writer: Write + Seek,
     {
         if !self.is_schema_consistent(spec) {
-            bail!("The content of record does not match the writer schema.");
+            return Err(Error::new_writer_schema_mismatch_error(
+                Self::write_spec().fields,
+                spec.fields.to_vec(),
+            ));
         }
 
         for field in self.0.iter() {
@@ -353,7 +357,10 @@ impl PcdSerialize for DynRecord {
         Writer: Write + Seek,
     {
         if !self.is_schema_consistent(spec) {
-            bail!("The content of record does not match the writer schema.");
+            return Err(Error::new_writer_schema_mismatch_error(
+                Self::write_spec().fields,
+                spec.fields.to_vec(),
+            ));
         }
 
         let mut tokens = vec![];
@@ -487,74 +494,82 @@ impl PcdDeserialize for DynRecord {
 
         {
             let expect = field_defs.iter().map(|def| def.count as usize).sum();
-            let error = Error::new_text_token_mismatch_error(expect, tokens.len());
             if tokens.len() != expect {
-                return Err(error.into());
+                return Err(Error::new_text_token_mismatch_error(expect, tokens.len()));
             }
         }
 
         let mut tokens_iter = tokens.into_iter();
-        let fields = field_defs
+
+        let fields: Vec<Field> = field_defs
             .iter()
-            .map(|def| {
+            .map(|def| -> Result<_, Error> {
                 let FieldDef { kind, count, .. } = *def;
 
-                let counter = 0..count;
+                let count = count as usize;
 
                 let field = match kind {
                     ValueKind::I8 => {
-                        let values = counter
-                            .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
-                            .collect::<Result<Vec<_>>>()?;
+                        let values: Vec<i8> = (&mut tokens_iter)
+                            .map(|token| token.parse())
+                            .take(count)
+                            .try_collect()?;
                         Field::I8(values)
                     }
                     ValueKind::I16 => {
-                        let values = counter
-                            .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
-                            .collect::<Result<Vec<_>>>()?;
+                        let values: Vec<i16> = (&mut tokens_iter)
+                            .map(|token| token.parse())
+                            .take(count)
+                            .try_collect()?;
                         Field::I16(values)
                     }
                     ValueKind::I32 => {
-                        let values = counter
-                            .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
-                            .collect::<Result<Vec<_>>>()?;
+                        let values: Vec<i32> = (&mut tokens_iter)
+                            .map(|token| token.parse())
+                            .take(count)
+                            .try_collect()?;
                         Field::I32(values)
                     }
                     ValueKind::U8 => {
-                        let values = counter
-                            .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
-                            .collect::<Result<Vec<_>>>()?;
+                        let values: Vec<u8> = (&mut tokens_iter)
+                            .map(|token| token.parse())
+                            .take(count)
+                            .try_collect()?;
                         Field::U8(values)
                     }
                     ValueKind::U16 => {
-                        let values = counter
-                            .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
-                            .collect::<Result<Vec<_>>>()?;
+                        let values: Vec<u16> = (&mut tokens_iter)
+                            .map(|token| token.parse())
+                            .take(count)
+                            .try_collect()?;
                         Field::U16(values)
                     }
                     ValueKind::U32 => {
-                        let values = counter
-                            .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
-                            .collect::<Result<Vec<_>>>()?;
+                        let values: Vec<u32> = (&mut tokens_iter)
+                            .map(|token| token.parse())
+                            .take(count)
+                            .try_collect()?;
                         Field::U32(values)
                     }
                     ValueKind::F32 => {
-                        let values = counter
-                            .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
-                            .collect::<Result<Vec<_>>>()?;
+                        let values: Vec<f32> = (&mut tokens_iter)
+                            .map(|token| token.parse())
+                            .take(count)
+                            .try_collect()?;
                         Field::F32(values)
                     }
                     ValueKind::F64 => {
-                        let values = counter
-                            .map(|_| Ok(tokens_iter.next().unwrap().parse()?))
-                            .collect::<Result<Vec<_>>>()?;
+                        let values: Vec<f64> = (&mut tokens_iter)
+                            .map(|token| token.parse())
+                            .take(count)
+                            .try_collect()?;
                         Field::F64(values)
                     }
                 };
 
                 Ok(field)
             })
-            .collect::<Result<Vec<_>>>()?;
+            .try_collect()?;
 
         Ok(Self(fields))
     }

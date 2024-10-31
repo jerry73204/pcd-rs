@@ -1,8 +1,8 @@
 use crate::{
     error::Error,
     metas::{DataKind, FieldDef, PcdMeta, Schema, TypeKind, ValueKind, ViewPoint},
+    Result,
 };
-use anyhow::Result;
 use std::{collections::HashSet, io::prelude::*};
 
 pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<PcdMeta> {

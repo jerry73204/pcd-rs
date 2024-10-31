@@ -1,4 +1,4 @@
-use anyhow::Result;
+use eyre::Result;
 use pcd_rs::{DataKind, DynRecord, DynWriter, Field, Schema, ValueKind, WriterInit};
 use std::iter::FromIterator;
 
@@ -42,7 +42,7 @@ fn main() -> Result<()> {
     .create(path)?;
 
     for point in dump_points.iter() {
-        writer.push(&point)?;
+        writer.push(point)?;
     }
 
     writer.finish()?;
