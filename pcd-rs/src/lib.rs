@@ -202,6 +202,7 @@ attributes.
 pub use byteorder;
 
 pub mod error;
+mod lzf;
 pub mod metas;
 pub mod prelude;
 pub mod reader;

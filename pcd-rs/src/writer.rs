@@ -47,14 +47,16 @@ fn main() -> Result<()> {
 )]
 
 use crate::{
+    lzf,
     metas::{DataKind, FieldDef, Schema, ValueKind, ViewPoint},
     record::{DynRecord, PcdSerialize},
     Error, Result,
 };
+use byteorder::{LittleEndian, WriteBytesExt};
 use std::{
     collections::HashSet,
     fs::File,
-    io::{prelude::*, BufWriter, SeekFrom},
+    io::{prelude::*, BufWriter, Cursor, SeekFrom},
     marker::PhantomData,
     path::Path,
 };
@@ -132,6 +134,7 @@ where
     points_arg_begin: u64,
     points_arg_width: usize,
     finished: bool,
+    compressed_buffer: Option<Vec<u8>>,
     _phantom: PhantomData<T>,
 }
 
@@ -242,9 +245,16 @@ where
             match data_kind {
                 DataKind::Binary => writeln!(writer, "DATA binary")?,
                 DataKind::Ascii => writeln!(writer, "DATA ascii")?,
+                DataKind::BinaryCompressed => writeln!(writer, "DATA binary_compressed")?,
             }
 
             (points_arg_begin, points_arg_width)
+        };
+
+        let compressed_buffer = if data_kind == DataKind::BinaryCompressed {
+            Some(Vec::new())
+        } else {
+            None
         };
 
         let seq_writer = Self {
@@ -255,6 +265,7 @@ where
             points_arg_begin,
             points_arg_width,
             finished: false,
+            compressed_buffer,
             _phantom: PhantomData,
         };
         Ok(seq_writer)
@@ -265,6 +276,30 @@ where
     /// The method consumes the writer must be called once when finished.
     /// Otherwise it will panic when it drops.
     pub fn finish(mut self) -> Result<()> {
+        // Write compressed data if using compression
+        if self.data_kind == DataKind::BinaryCompressed {
+            if let Some(ref uncompressed_data) = self.compressed_buffer {
+                if uncompressed_data.is_empty() {
+                    // For empty data, write zeros for sizes
+                    self.writer.write_u32::<LittleEndian>(0)?;
+                    self.writer.write_u32::<LittleEndian>(0)?;
+                } else {
+                    // Compress the data
+                    let compressed_data = lzf::compress(uncompressed_data)?;
+
+                    // Write compressed size and uncompressed size
+                    self.writer
+                        .write_u32::<LittleEndian>(compressed_data.len() as u32)?;
+                    self.writer
+                        .write_u32::<LittleEndian>(uncompressed_data.len() as u32)?;
+
+                    // Write compressed data
+                    self.writer.write_all(&compressed_data)?;
+                }
+            }
+        }
+
+        // Update the points count in the header
         self.writer.seek(SeekFrom::Start(self.points_arg_begin))?;
         write!(
             self.writer,
@@ -281,6 +316,21 @@ where
         match self.data_kind {
             DataKind::Binary => record.write_chunk(&mut self.writer, &self.record_spec)?,
             DataKind::Ascii => record.write_line(&mut self.writer, &self.record_spec)?,
+            DataKind::BinaryCompressed => {
+                // Buffer the binary data for compression
+                if let Some(ref mut buffer) = self.compressed_buffer {
+                    // Create a temporary buffer with cursor to write the record
+                    let mut temp_buffer = Vec::new();
+                    let mut cursor = Cursor::new(&mut temp_buffer);
+                    record.write_chunk(&mut cursor, &self.record_spec)?;
+                    buffer.extend_from_slice(&temp_buffer);
+                } else {
+                    return Err(Error::ParseError {
+                        line: 0,
+                        desc: "Compressed buffer not initialized".into(),
+                    });
+                }
+            }
         }
 
         self.num_records += 1;

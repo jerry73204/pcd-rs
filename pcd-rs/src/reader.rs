@@ -31,10 +31,12 @@ fn main() -> pcd_rs::Result<()> {
 
 use crate::{
     error::Error,
+    lzf,
     metas::{DataKind, FieldDef, PcdMeta},
     record::{DynRecord, PcdDeserialize},
     Result,
 };
+use byteorder::{LittleEndian, ReadBytesExt};
 use std::{
     fs::File,
     io::{prelude::*, BufReader, Cursor},
@@ -54,6 +56,7 @@ where
     record_count: usize,
     finished: bool,
     reader: R,
+    decompressed_buffer: Option<Cursor<Vec<u8>>>,
     _phantom: PhantomData<T>,
 }
 
@@ -119,11 +122,34 @@ where
             }
         }
 
+        // For compressed data, read and decompress the entire data section
+        let decompressed_buffer = if meta.data == DataKind::BinaryCompressed {
+            // Read compressed size and uncompressed size
+            let compressed_size = reader.read_u32::<LittleEndian>()?;
+            let uncompressed_size = reader.read_u32::<LittleEndian>()?;
+
+            if compressed_size == 0 && uncompressed_size == 0 {
+                // Empty compressed data
+                Some(Cursor::new(Vec::new()))
+            } else {
+                // Read compressed data
+                let mut compressed_data = vec![0u8; compressed_size as usize];
+                reader.read_exact(&mut compressed_data)?;
+
+                // Decompress
+                let decompressed = lzf::decompress(&compressed_data, uncompressed_size as usize)?;
+                Some(Cursor::new(decompressed))
+            }
+        } else {
+            None
+        };
+
         let pcd_reader = Reader {
             meta,
             reader,
             record_count: 0,
             finished: false,
+            decompressed_buffer,
             _phantom: PhantomData,
         };
 
@@ -163,9 +189,26 @@ where
             return None;
         }
 
+        // Check if we've already read all points or if there are no points
+        if self.record_count >= self.meta.num_points as usize {
+            self.finished = true;
+            return None;
+        }
+
         let record_result = match self.meta.data {
             DataKind::Ascii => Record::read_line(&mut self.reader, &self.meta.field_defs),
             DataKind::Binary => Record::read_chunk(&mut self.reader, &self.meta.field_defs),
+            DataKind::BinaryCompressed => {
+                // Read from decompressed buffer
+                if let Some(ref mut buffer) = self.decompressed_buffer {
+                    Record::read_chunk(buffer, &self.meta.field_defs)
+                } else {
+                    return Some(Err(Error::ParseError {
+                        line: 0,
+                        desc: "Compressed data buffer not initialized".into(),
+                    }));
+                }
+            }
         };
 
         match record_result {

@@ -226,6 +226,7 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
         match tokens[1].as_str() {
             "ascii" => DataKind::Ascii,
             "binary" => DataKind::Binary,
+            "binary_compressed" => DataKind::BinaryCompressed,
             _ => {
                 return Err(
                     Error::new_parse_error(*line_count, "DATA line is not understood").into(),
