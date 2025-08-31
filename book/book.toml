@@ -1,0 +1,5 @@
+[book]
+authors = ["aeon"]
+language = "en"
+src = "src"
+title = "pcd-rs Developer Guide"
