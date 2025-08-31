@@ -50,11 +50,12 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
         let tokens = get_meta_line("VERSION")?;
         if tokens.len() == 2 {
             match tokens[1].as_str() {
-                "0.7" => String::from("0.7"),
-                ".7" => String::from("0.7"),
+                "0.7" | ".7" => String::from("0.7"),
+                "0.6" | ".6" => String::from("0.6"),
+                "0.5" | ".5" => String::from("0.5"),
                 _ => {
                     let desc = format!(
-                        "Unsupported version {:?}. Supported versions are: 0.7",
+                        "Unsupported version {:?}. Supported versions are: 0.5, 0.6, 0.7",
                         tokens[1]
                     );
                     return Err(Error::new_parse_error(*line_count, &desc).into());
@@ -177,29 +178,37 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
     };
 
     let meta_viewpoint = {
-        let tokens = get_meta_line("VIEWPOINT")?;
+        // VIEWPOINT field was introduced in version 0.7
+        // For versions 0.5 and 0.6, use default values
+        if meta_version == "0.5" || meta_version == "0.6" {
+            ViewPoint::default()
+        } else {
+            let tokens = get_meta_line("VIEWPOINT")?;
 
-        if tokens.len() != 8 {
-            return Err(
-                Error::new_parse_error(*line_count, "VIEWPOINT line is not understood").into(),
-            );
-        }
+            if tokens.len() != 8 {
+                return Err(Error::new_parse_error(
+                    *line_count,
+                    "VIEWPOINT line is not understood",
+                )
+                .into());
+            }
 
-        let tx = tokens[1].parse()?;
-        let ty = tokens[2].parse()?;
-        let tz = tokens[3].parse()?;
-        let qw = tokens[4].parse()?;
-        let qx = tokens[5].parse()?;
-        let qy = tokens[6].parse()?;
-        let qz = tokens[7].parse()?;
-        ViewPoint {
-            tx,
-            ty,
-            tz,
-            qw,
-            qx,
-            qy,
-            qz,
+            let tx = tokens[1].parse()?;
+            let ty = tokens[2].parse()?;
+            let tz = tokens[3].parse()?;
+            let qw = tokens[4].parse()?;
+            let qx = tokens[5].parse()?;
+            let qy = tokens[6].parse()?;
+            let qz = tokens[7].parse()?;
+            ViewPoint {
+                tx,
+                ty,
+                tz,
+                qw,
+                qx,
+                qy,
+                qz,
+            }
         }
     };
 
@@ -226,7 +235,17 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
         match tokens[1].as_str() {
             "ascii" => DataKind::Ascii,
             "binary" => DataKind::Binary,
-            "binary_compressed" => DataKind::BinaryCompressed,
+            "binary_compressed" => {
+                // binary_compressed format was introduced in version 0.7
+                if meta_version != "0.7" {
+                    let desc = format!(
+                        "binary_compressed format is only supported in PCD version 0.7, found version {}",
+                        meta_version
+                    );
+                    return Err(Error::new_parse_error(*line_count, &desc).into());
+                }
+                DataKind::BinaryCompressed
+            }
             _ => {
                 return Err(
                     Error::new_parse_error(*line_count, "DATA line is not understood").into(),
