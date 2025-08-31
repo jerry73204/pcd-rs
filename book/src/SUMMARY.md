@@ -38,9 +38,7 @@
 
 # Roadmap
 
-- [Project Status](./roadmap/status.md)
-- [Completed Features](./roadmap/completed.md)
-- [Future Work](./roadmap/future.md)
+- [Project Roadmap](./roadmap.md)
 
 # API Reference
 
