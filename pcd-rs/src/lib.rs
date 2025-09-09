@@ -201,6 +201,7 @@ attributes.
 #[doc(hidden)]
 pub use byteorder;
 
+pub mod chunk;
 pub mod error;
 mod lzf;
 pub mod metas;
@@ -211,6 +212,9 @@ pub mod traits;
 mod utils;
 pub mod writer;
 
+pub use chunk::{
+    Chunk, ChunkConfig, ChunkProgress, ChunkedReader, ChunkedReaderBuilder, DynChunkedReader,
+};
 pub use error::{Error, Result};
 pub use metas::{DataKind, FieldDef, PcdMeta, Schema, TypeKind, ValueKind, ViewPoint};
 #[cfg(feature = "derive")]
