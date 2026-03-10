@@ -1,7 +1,6 @@
 //! Edge case tests for binary_compressed format
 
 use pcd_rs::{DataKind, DynReader, DynRecord, Field, Schema, ValueKind, WriterInit};
-use std::io::Write;
 use tempfile::NamedTempFile;
 
 #[test]
@@ -279,26 +278,7 @@ fn test_large_point_cloud() -> pcd_rs::Result<()> {
 
 #[test]
 fn test_corrupt_compressed_file() {
-    let mut file = NamedTempFile::new().unwrap();
-
-    writeln!(file, "# .PCD v.7 - Point Cloud Data file format").unwrap();
-    writeln!(file, "VERSION .7").unwrap();
-    writeln!(file, "FIELDS x y z").unwrap();
-    writeln!(file, "SIZE 4 4 4").unwrap();
-    writeln!(file, "TYPE F F F").unwrap();
-    writeln!(file, "COUNT 1 1 1").unwrap();
-    writeln!(file, "WIDTH 3").unwrap();
-    writeln!(file, "HEIGHT 1").unwrap();
-    writeln!(file, "VIEWPOINT 0 0 0 1 0 0 0").unwrap();
-    writeln!(file, "POINTS 3").unwrap();
-    writeln!(file, "DATA binary_compressed").unwrap();
-
-    // Write invalid compressed data (sizes don't match actual data)
-    file.write_all(&100u32.to_le_bytes()).unwrap(); // compressed size
-    file.write_all(&200u32.to_le_bytes()).unwrap(); // uncompressed size
-    file.write_all(b"invalid data").unwrap(); // Not enough data
-
-    let result = DynReader::open(file.path());
+    let result = DynReader::open("test_files/corrupt_compressed.pcd");
     assert!(
         result.is_err(),
         "Should fail to read corrupted compressed file"

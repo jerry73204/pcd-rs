@@ -9,10 +9,18 @@
 Cargo.lock
 
 # Test artifacts (generated during test runs)
-# Only pcd-rs/test_files/ascii.pcd and binary.pcd are committed fixtures.
+# Committed fixtures are whitelisted below.
 pcd-rs/test_files/*.pcd
 !pcd-rs/test_files/ascii.pcd
 !pcd-rs/test_files/binary.pcd
+!pcd-rs/test_files/v05_ascii.pcd
+!pcd-rs/test_files/v05_no_viewpoint.pcd
+!pcd-rs/test_files/v05_binary_compressed.pcd
+!pcd-rs/test_files/v06_binary.pcd
+!pcd-rs/test_files/v06_binary_compressed.pcd
+!pcd-rs/test_files/v06_mixed_types_binary.pcd
+!pcd-rs/test_files/unsupported_v04.pcd
+!pcd-rs/test_files/corrupt_compressed.pcd
 
 # Workspace-root test_files are example outputs, not fixtures
 /test_files/
