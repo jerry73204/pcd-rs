@@ -3,6 +3,7 @@
 use eyre::Result;
 use itertools::Itertools as _;
 use pcd_rs::{DataKind, PcdDeserialize, PcdSerialize, Reader, WriterInit};
+use tempfile::NamedTempFile;
 
 #[derive(Debug, PcdDeserialize, PcdSerialize, PartialEq)]
 pub struct Point {
@@ -14,10 +15,10 @@ pub struct Point {
 
 #[test]
 fn write_ascii_typed() -> Result<()> {
-    let path = "test_files/dump_ascii_typed.pcd";
+    let file = NamedTempFile::new()?;
     let dump_points = vec![
         Point {
-            x: 3.14159,
+            x: 3.5,
             y: [2, 1, 7],
             z: -5,
         },
@@ -39,8 +40,9 @@ fn write_ascii_typed() -> Result<()> {
         viewpoint: Default::default(),
         data_kind: DataKind::Ascii,
         schema: None,
+        version: None,
     }
-    .create(path)?;
+    .create(file.path())?;
 
     for point in &dump_points {
         writer.push(point)?;
@@ -48,22 +50,21 @@ fn write_ascii_typed() -> Result<()> {
 
     writer.finish()?;
 
-    let reader = Reader::open(path)?;
+    let reader = Reader::open(file.path())?;
     let load_points: Vec<Point> = reader.try_collect()?;
 
     assert_eq!(dump_points, load_points);
-    std::fs::remove_file(path)?;
 
     Ok(())
 }
 
 #[test]
 fn write_binary_typed() -> Result<()> {
-    let path = "test_files/dump_binary_typed.pcd";
+    let file = NamedTempFile::new()?;
 
     let dump_points = vec![
         Point {
-            x: 3.14159,
+            x: 3.5,
             y: [2, 1, 7],
             z: -5,
         },
@@ -85,8 +86,9 @@ fn write_binary_typed() -> Result<()> {
         viewpoint: Default::default(),
         data_kind: DataKind::Binary,
         schema: None,
+        version: None,
     }
-    .create(path)?;
+    .create(file.path())?;
 
     for point in &dump_points {
         writer.push(point)?;
@@ -94,11 +96,10 @@ fn write_binary_typed() -> Result<()> {
 
     writer.finish()?;
 
-    let reader = Reader::open(path)?;
+    let reader = Reader::open(file.path())?;
     let load_points: Vec<Point> = reader.try_collect()?;
 
     assert_eq!(dump_points, load_points);
-    std::fs::remove_file(path)?;
 
     Ok(())
 }

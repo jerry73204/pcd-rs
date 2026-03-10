@@ -26,6 +26,7 @@ fn main() -> Result<()> {
         viewpoint: Default::default(),
         data_kind: DataKind::Ascii,
         schema: None,
+        version: None,
     }
     .create("test_files/dump.pcd")?;
 
@@ -71,6 +72,8 @@ pub struct WriterInit {
     pub viewpoint: ViewPoint,
     pub data_kind: DataKind,
     pub schema: Option<Schema>,
+    /// PCD version to write (defaults to "0.7")
+    pub version: Option<String>,
 }
 
 impl WriterInit {
@@ -99,6 +102,8 @@ impl WriterInit {
             Record::write_spec()
         };
 
+        let version = self.version.unwrap_or_else(|| "0.7".to_string());
+
         let seq_writer = Writer::new(
             self.width,
             self.height,
@@ -106,6 +111,7 @@ impl WriterInit {
             self.viewpoint,
             record_spec,
             writer,
+            version,
         )?;
         Ok(seq_writer)
     }
@@ -150,6 +156,7 @@ where
         viewpoint: ViewPoint,
         record_spec: Schema,
         mut writer: W,
+        version: String,
     ) -> Result<Self, Error> {
         macro_rules! ensure {
             ($cond:expr, $desc:expr) => {
@@ -159,10 +166,29 @@ where
             };
         }
 
+        // Validate version
+        match version.as_str() {
+            "0.5" | ".5" | "0.6" | ".6" | "0.7" | ".7" => {}
+            _ => {
+                return Err(Error::new_invalid_writer_configuration_error(
+                    "Unsupported PCD version. Supported versions: 0.5, 0.6, 0.7",
+                ))
+            }
+        }
+
+        // Check version-specific constraints
+        if version == "0.5" || version == ".5" || version == "0.6" || version == ".6" {
+            // Legacy versions don't support binary_compressed
+            if matches!(data_kind, DataKind::BinaryCompressed) {
+                return Err(Error::new_invalid_writer_configuration_error(
+                    "binary_compressed format is only supported in PCD v0.7",
+                ));
+            }
+        }
+
         // Run sanity check on the schema.
         {
             for FieldDef { name, count, .. } in &record_spec {
-                if name.is_empty() {}
                 ensure!(!name.is_empty(), "field name must not be empty");
                 ensure!(*count > 0, "The field count must be nonzero");
             }
@@ -226,20 +252,38 @@ where
                 .collect()
             };
 
-            let points_arg_width = (usize::max_value() as f64).log10().floor() as usize + 1;
+            let points_arg_width = (usize::MAX as f64).log10().floor() as usize + 1;
 
-            writeln!(writer, "# .PCD v.7 - Point Cloud Data file format")?;
-            writeln!(writer, "VERSION .7")?;
+            // Normalize version format for header
+            let header_version = match version.as_str() {
+                "0.5" | ".5" => ".5",
+                "0.6" | ".6" => ".6",
+                "0.7" | ".7" => ".7",
+                _ => ".7",
+            };
+
+            let header_comment = match header_version {
+                ".5" => "# .PCD v.5 - Point Cloud Data file format",
+                ".6" => "# .PCD v.6 - Point Cloud Data file format",
+                _ => "# .PCD v.7 - Point Cloud Data file format",
+            };
+
+            writeln!(writer, "{}", header_comment)?;
+            writeln!(writer, "VERSION {}", header_version)?;
             writeln!(writer, "FIELDS {}", fields_args.join(" "))?;
             writeln!(writer, "SIZE {}", size_args.join(" "))?;
             writeln!(writer, "TYPE {}", type_args.join(" "))?;
             writeln!(writer, "COUNT {}", count_args.join(" "))?;
             writeln!(writer, "WIDTH {}", width)?;
             writeln!(writer, "HEIGHT {}", height)?;
-            writeln!(writer, "VIEWPOINT {}", viewpoint_args.join(" "))?;
+
+            // Only write VIEWPOINT for v0.7
+            if header_version == ".7" {
+                writeln!(writer, "VIEWPOINT {}", viewpoint_args.join(" "))?;
+            }
 
             write!(writer, "POINTS ")?;
-            let points_arg_begin = writer.seek(SeekFrom::Current(0))?;
+            let points_arg_begin = writer.stream_position()?;
             writeln!(writer, "{:width$}", " ", width = points_arg_width)?;
 
             match data_kind {

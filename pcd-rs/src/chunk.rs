@@ -97,7 +97,7 @@ where
     /// Create a new chunked reader from an existing reader
     pub fn new(reader: Reader<Record, R>, config: ChunkConfig) -> Self {
         let total_points = reader.meta().num_points as usize;
-        let total_chunks = (total_points + config.chunk_size - 1) / config.chunk_size;
+        let total_chunks = total_points.div_ceil(config.chunk_size);
 
         Self {
             reader,
@@ -271,7 +271,7 @@ where
         use rayon::prelude::*;
 
         let total_points = self.meta.num_points as usize;
-        let total_chunks = (total_points + self.config.chunk_size - 1) / self.config.chunk_size;
+        let total_chunks = total_points.div_ceil(self.config.chunk_size);
 
         // Set thread pool size if specified
         if let Some(max_threads) = self.config.max_threads {
@@ -279,10 +279,10 @@ where
                 .num_threads(max_threads)
                 .build()
                 .map_err(|e| {
-                    Error::IoError(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        format!("Failed to create thread pool: {}", e),
-                    ))
+                    Error::IoError(std::io::Error::other(format!(
+                        "Failed to create thread pool: {}",
+                        e
+                    )))
                 })?;
         }
 

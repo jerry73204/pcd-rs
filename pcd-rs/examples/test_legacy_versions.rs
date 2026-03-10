@@ -82,6 +82,6 @@ fn main() -> pcd_rs::Result<()> {
         }
     }
 
-    println!("\n✅ All legacy version tests passed!");
+    println!("\nAll legacy version tests passed!");
     Ok(())
 }

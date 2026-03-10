@@ -42,6 +42,6 @@ fn main() -> pcd_rs::Result<()> {
         }
     }
 
-    println!("\n✅ Successfully read PCL bunny.pcd file with legacy v0.5 support!");
+    println!("\nSuccessfully read PCL bunny.pcd file with legacy v0.5 support!");
     Ok(())
 }

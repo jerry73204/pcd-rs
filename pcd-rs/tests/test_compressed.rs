@@ -1,6 +1,6 @@
 //! Tests for binary_compressed PCD format support
 
-use pcd_rs::{DataKind, DynReader, DynRecord, DynWriter, Field, Schema, ValueKind, WriterInit};
+use pcd_rs::{DataKind, DynReader, DynRecord, Field, Schema, ValueKind, WriterInit};
 use std::io::Cursor;
 
 #[test]
@@ -45,6 +45,7 @@ fn test_write_read_compressed() {
             viewpoint: Default::default(),
             data_kind: DataKind::BinaryCompressed,
             schema: Some(schema.clone()),
+            version: None,
         }
         .build_from_writer(cursor)
         .unwrap();
@@ -114,6 +115,7 @@ fn test_compressed_large_data() {
             viewpoint: Default::default(),
             data_kind: DataKind::BinaryCompressed,
             schema: Some(schema.clone()),
+            version: None,
         }
         .build_from_writer(cursor)
         .unwrap();
@@ -134,6 +136,7 @@ fn test_compressed_large_data() {
             viewpoint: Default::default(),
             data_kind: DataKind::Binary,
             schema: Some(schema),
+            version: None,
         }
         .build_from_writer(cursor)
         .unwrap();
@@ -195,6 +198,7 @@ fn test_compressed_with_arrays() {
             viewpoint: Default::default(),
             data_kind: DataKind::BinaryCompressed,
             schema: Some(schema),
+            version: None,
         }
         .build_from_writer(cursor)
         .unwrap();

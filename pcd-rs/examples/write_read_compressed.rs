@@ -44,6 +44,7 @@ fn main() -> pcd_rs::Result<()> {
             viewpoint: Default::default(),
             data_kind: DataKind::BinaryCompressed,
             schema: Some(schema.clone()),
+            version: None,
         }
         .create("test_files/output_compressed.pcd")?;
 
@@ -97,6 +98,7 @@ fn main() -> pcd_rs::Result<()> {
             viewpoint: Default::default(),
             data_kind: DataKind::Binary,
             schema: Some(schema),
+            version: None,
         }
         .create("test_files/output_binary.pcd")?;
 
@@ -116,7 +118,7 @@ fn main() -> pcd_rs::Result<()> {
         );
     }
 
-    println!("\n✅ Test passed! Binary compressed format is working correctly.");
+    println!("\nTest passed! Binary compressed format is working correctly.");
 
     Ok(())
 }

@@ -85,7 +85,7 @@ fn test_different_chunk_sizes() -> pcd_rs::Result<()> {
         );
 
         // Verify chunk count calculation
-        let expected_chunks = (meta_points + chunk_size - 1) / chunk_size;
+        let expected_chunks = meta_points.div_ceil(chunk_size);
         assert_eq!(
             chunks.len(),
             expected_chunks,
@@ -353,14 +353,14 @@ fn test_builder_configuration() -> pcd_rs::Result<()> {
         .open("test_files/ascii.pcd")?;
 
     // Just verify that the builder created a valid reader
-    assert_eq!(reader.meta().num_points > 0, true);
+    assert!(reader.meta().num_points > 0);
 
     // Test with different configurations
     let reader2 = ChunkedReaderBuilder::default()
         .chunk_size(500)
         .open("test_files/ascii.pcd")?;
 
-    assert_eq!(reader2.meta().num_points > 0, true);
+    assert!(reader2.meta().num_points > 0);
 
     Ok(())
 }

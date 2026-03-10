@@ -218,6 +218,7 @@ Final preparations for stable release.
 - [x] PCD v0.7 format support
 - [x] ASCII format reading/writing
 - [x] Binary format reading/writing
+- [x] Binary compressed format reading/writing (LZF)
 - [x] Dynamic schema API (DynReader/DynWriter)
 - [x] Static type API with generics
 - [x] Derive macros (PcdSerialize/PcdDeserialize)
@@ -233,6 +234,8 @@ Final preparations for stable release.
 - [x] Result-based error handling
 
 ### Recent Improvements
+- [x] Binary compressed format support (LZF) (v0.12.0+)
+- [x] Legacy PCD version support (v0.5, v0.6) (v0.12.0+)
 - [x] Removed anyhow dependency (v0.12.0)
 - [x] Updated all dependencies (v0.12.0)
 - [x] Workspace reorganization (v0.11.0)
@@ -270,10 +273,10 @@ Final preparations for stable release.
 ### How to Help
 
 **High Priority Contributions:**
-1. Implement LZF compression (Phase 1)
-2. Add PCD v0.6 support (Phase 1)
-3. Create memory-mapped reader (Phase 1)
-4. Add parallel processing (Phase 2)
+1. ~~Implement LZF compression~~ ✅ DONE
+2. ~~Add PCD v0.5/v0.6 support~~ ✅ DONE
+3. Create chunked streaming API (Phase 1)
+4. Add parallel chunk processing (Phase 1)
 5. Write command-line tools (Phase 5)
 
 **Good First Issues:**

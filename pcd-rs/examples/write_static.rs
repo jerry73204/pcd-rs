@@ -14,9 +14,9 @@ pub fn main() -> Result<()> {
     let path = "test_files/dump_ascii_static.pcd";
 
     // point data
-    let dump_points = vec![
+    let dump_points = [
         Point {
-            x: 3.14159,
+            x: 3.5,
             y: [2, 1, 7],
             z: -5,
         },
@@ -39,11 +39,12 @@ pub fn main() -> Result<()> {
         viewpoint: Default::default(),
         data_kind: DataKind::Ascii,
         schema: None,
+        version: None,
     }
     .create::<Point, _>(path)?;
 
-    for point in dump_points.iter() {
-        writer.push(&point)?;
+    for point in &dump_points {
+        writer.push(point)?;
     }
 
     writer.finish()?;

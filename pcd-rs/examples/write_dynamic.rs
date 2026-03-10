@@ -9,7 +9,7 @@ fn main() -> Result<()> {
     // point data
     let dump_points = vec![
         DynRecord(vec![
-            Field::F32(vec![3.14159]),
+            Field::F32(vec![3.5]),
             Field::U8(vec![2, 1, 7]),
             Field::I32(vec![-5]),
         ]),
@@ -38,10 +38,11 @@ fn main() -> Result<()> {
         viewpoint: Default::default(),
         data_kind: DataKind::Ascii,
         schema: Some(Schema::from_iter(schema)),
+        version: None,
     }
     .create(path)?;
 
-    for point in dump_points.iter() {
+    for point in &dump_points {
         writer.push(point)?;
     }
 

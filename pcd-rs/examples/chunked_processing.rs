@@ -174,7 +174,7 @@ fn main() -> pcd_rs::Result<()> {
 
         for (bin, count) in sorted_bins.iter().take(5) {
             let z_value = **bin as f32 / 100.0;
-            println!("  z≈{:.2}: {} points", z_value, count);
+            println!("  z~={:.2}: {} points", z_value, count);
         }
     }
 
@@ -216,7 +216,7 @@ fn main() -> pcd_rs::Result<()> {
         for summary in chunk_summaries.iter().take(5) {
             // Show first 5
             println!(
-                "  Chunk {}: {} pts, z∈[{:.3}, {:.3}], avg_z={:.3}",
+                "  Chunk {}: {} pts, z in [{:.3}, {:.3}], avg_z={:.3}",
                 summary.index, summary.count, summary.min_z, summary.max_z, summary.avg_z
             );
         }
