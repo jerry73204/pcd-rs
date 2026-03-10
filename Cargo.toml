@@ -4,3 +4,7 @@ members = [
     "pcd-rs",
     "pcd-rs-derive",
 ]
+
+[profile.dev-release]
+inherits = "release"
+debug = true

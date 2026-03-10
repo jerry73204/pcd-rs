@@ -12,6 +12,6 @@ check:
     cargo clippy --profile dev-release --all-targets --all-features
 
 test:
-    cargo nextest run --profile dev-release --no-fail-fast --all-features
+    cargo nextest run --cargo-profile dev-release --no-fail-fast --all-features
 
 ci: check test
