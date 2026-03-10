@@ -136,9 +136,50 @@ where
                 let mut compressed_data = vec![0u8; compressed_size as usize];
                 reader.read_exact(&mut compressed_data)?;
 
-                // Decompress
-                let decompressed = lzf::decompress(&compressed_data, uncompressed_size as usize)?;
-                Some(Cursor::new(decompressed))
+                // Decompress (data is in column-major / SoA layout)
+                let col_major = lzf::decompress(&compressed_data, uncompressed_size as usize)?;
+
+                // Transpose from column-major to row-major so read_chunk works
+                let num_points = meta.num_points as usize;
+                if num_points == 0 {
+                    Some(Cursor::new(col_major))
+                } else {
+                    // Calculate per-field byte sizes and record size
+                    let field_byte_sizes: Vec<usize> = meta
+                        .field_defs
+                        .iter()
+                        .map(|f| f.kind.byte_size() * f.count as usize)
+                        .collect();
+                    let record_size: usize = field_byte_sizes.iter().sum();
+
+                    let mut row_major = vec![0u8; col_major.len()];
+
+                    // column_start[f] is the byte offset where field f's column begins
+                    let mut column_start = Vec::with_capacity(field_byte_sizes.len());
+                    let mut offset = 0usize;
+                    for &fbs in &field_byte_sizes {
+                        column_start.push(offset);
+                        offset += fbs * num_points;
+                    }
+
+                    // field_offset_in_record[f] is the byte offset of field f within a single record
+                    let mut field_offset_in_record = Vec::with_capacity(field_byte_sizes.len());
+                    let mut rec_offset = 0usize;
+                    for &fbs in &field_byte_sizes {
+                        field_offset_in_record.push(rec_offset);
+                        rec_offset += fbs;
+                    }
+
+                    for i in 0..num_points {
+                        for (f, &fbs) in field_byte_sizes.iter().enumerate() {
+                            let src = column_start[f] + i * fbs;
+                            let dst = i * record_size + field_offset_in_record[f];
+                            row_major[dst..dst + fbs].copy_from_slice(&col_major[src..src + fbs]);
+                        }
+                    }
+
+                    Some(Cursor::new(row_major))
+                }
             }
         } else {
             None

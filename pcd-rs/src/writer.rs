@@ -322,20 +322,55 @@ where
     pub fn finish(mut self) -> Result<()> {
         // Write compressed data if using compression
         if self.data_kind == DataKind::BinaryCompressed {
-            if let Some(ref uncompressed_data) = self.compressed_buffer {
-                if uncompressed_data.is_empty() {
+            if let Some(ref row_major_data) = self.compressed_buffer {
+                if row_major_data.is_empty() {
                     // For empty data, write zeros for sizes
                     self.writer.write_u32::<LittleEndian>(0)?;
                     self.writer.write_u32::<LittleEndian>(0)?;
                 } else {
-                    // Compress the data
-                    let compressed_data = lzf::compress(uncompressed_data)?;
+                    // Transpose from row-major to column-major (SoA) layout
+                    let num_points = self.num_records;
+                    let field_byte_sizes: Vec<usize> = self
+                        .record_spec
+                        .iter()
+                        .map(|f| f.kind.byte_size() * f.count as usize)
+                        .collect();
+                    let record_size: usize = field_byte_sizes.iter().sum();
+
+                    // column_start[f] is the byte offset where field f's column begins
+                    let mut column_start = Vec::with_capacity(field_byte_sizes.len());
+                    let mut offset = 0usize;
+                    for &fbs in &field_byte_sizes {
+                        column_start.push(offset);
+                        offset += fbs * num_points;
+                    }
+
+                    // field_offset_in_record[f] is the byte offset of field f within a single record
+                    let mut field_offset_in_record = Vec::with_capacity(field_byte_sizes.len());
+                    let mut rec_offset = 0usize;
+                    for &fbs in &field_byte_sizes {
+                        field_offset_in_record.push(rec_offset);
+                        rec_offset += fbs;
+                    }
+
+                    let mut col_major = vec![0u8; row_major_data.len()];
+                    for i in 0..num_points {
+                        for (f, &fbs) in field_byte_sizes.iter().enumerate() {
+                            let src = i * record_size + field_offset_in_record[f];
+                            let dst = column_start[f] + i * fbs;
+                            col_major[dst..dst + fbs]
+                                .copy_from_slice(&row_major_data[src..src + fbs]);
+                        }
+                    }
+
+                    // Compress the column-major data
+                    let compressed_data = lzf::compress(&col_major)?;
 
                     // Write compressed size and uncompressed size
                     self.writer
                         .write_u32::<LittleEndian>(compressed_data.len() as u32)?;
                     self.writer
-                        .write_u32::<LittleEndian>(uncompressed_data.len() as u32)?;
+                        .write_u32::<LittleEndian>(col_major.len() as u32)?;
 
                     // Write compressed data
                     self.writer.write_all(&compressed_data)?;
