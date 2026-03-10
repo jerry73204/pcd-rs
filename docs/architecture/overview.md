@@ -145,5 +145,4 @@ Key performance optimizations:
 
 ## Next Steps
 
-- Explore [Core Components](./core_components.md) for detailed component descriptions
-- Learn about [Data Flow](./data_flow.md) for processing pipelines
+See `core-components.md` and `data-flow.md` in this directory for detailed component descriptions and processing pipelines.

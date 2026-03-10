@@ -8,49 +8,60 @@ pcd-rs is actively maintained and production-ready for most use cases. This road
 
 Essential features for full PCD format compatibility.
 
-### Binary Compressed Format
-- [ ] Complete LZF decompression implementation
-- [ ] LZF compression for writing compressed files
-- [ ] Streaming decompression for large files
+### Binary Compressed Format ✅
+- [x] Complete LZF decompression implementation
+- [x] LZF compression for writing compressed files
+- [x] Streaming decompression for large files
 - [ ] Compression ratio configuration
 - [ ] Fallback to uncompressed on compression failure
-- [ ] Unit tests for various compressed data patterns
-- [ ] Integration tests with real compressed PCD files
+- [x] Unit tests for various compressed data patterns
+- [x] Integration tests with real compressed PCD files
 - [ ] Benchmarks comparing compressed vs uncompressed performance
 
-### Legacy PCD Version Support
-- [ ] PCD v0.6 reader implementation
+### Legacy PCD Version Support ✅
+- [x] PCD v0.6 reader implementation
 - [ ] PCD v0.6 writer implementation
-- [ ] PCD v0.5 reader implementation
+- [x] PCD v0.5 reader implementation
 - [ ] PCD v0.5 writer implementation
-- [ ] Automatic version detection from header
+- [x] Automatic version detection from header
 - [ ] Version upgrade utility (v0.5/0.6 → v0.7)
-- [ ] Compatibility tests with PCL-generated files
-- [ ] Documentation of version differences
+- [x] Compatibility tests with PCL-generated files
+- [x] Documentation of version differences
 
-### Memory-Mapped File Access
-- [ ] Design memory-mapped reader API
-- [ ] Implement mmap for binary format reading
-- [ ] Zero-copy point access interface
-- [ ] Lazy loading of point data on access
-- [ ] Random access to points by index
+### Chunked Streaming API (High Priority)
+
+**Why chunked streaming instead of memory-mapped files?**
+Most point cloud algorithms (downsampling, filtering, transformation) work perfectly with sequential chunk processing. Memory-mapped files only benefit narrow use cases like databases or real-time systems with random access patterns. Chunked streaming provides:
+- Universal format support (ASCII, binary, compressed)
+- Natural parallelism boundaries
+- Predictable memory usage
+- Simpler mental model
+
+**Implementation goals:**
+- [ ] Design chunked reader/writer API
+- [ ] Implement chunked reading for all formats (ASCII, binary, compressed)
+- [ ] Configurable chunk size based on memory constraints
+- [ ] Parallel chunk processing with rayon integration
+- [ ] Natural parallelism boundaries for multi-core processing
 - [ ] Support for files larger than available RAM
-- [ ] Platform-specific optimizations (Linux, Windows, macOS)
-- [ ] Fallback to standard I/O when mmap unavailable
+- [ ] Progress callbacks and cancellation support
+- [ ] Zero-copy chunks for binary format
+- [ ] Streaming transformations and filters
+- [ ] Examples for common patterns (downsampling, filtering, statistics)
 
 ## Phase 2: Performance & Scalability
 
 Optimizations for large-scale point cloud processing.
 
-### Streaming Operations
-- [ ] Streaming writer API design
-- [ ] Write points without knowing total count upfront
-- [ ] Chunked reading for memory-bounded processing
-- [ ] Chunked writing with automatic header update
-- [ ] Pipeline processing support with backpressure
-- [ ] Streaming compression/decompression
-- [ ] Progress callback for long operations
-- [ ] Cancelable operations
+### Advanced Streaming Operations
+- [ ] Streaming writer without knowing total count upfront
+- [ ] Pipeline processing with backpressure handling
+- [ ] Multi-stage transformation pipelines
+- [ ] Automatic chunk size optimization
+- [ ] Memory usage monitoring and limits
+- [ ] Concurrent chunk readers for multiple files
+- [ ] Chunk-based spatial indexing
+- [ ] Streaming merge operations for multiple PCD files
 
 ### Parallel Processing
 - [ ] Parallel ASCII parsing using rayon
@@ -184,6 +195,16 @@ Integration with broader Rust and robotics ecosystem.
 - [ ] PyTorch tensor integration
 - [ ] ONNX model support for processing
 - [ ] Point cloud augmentation utilities
+
+### Specialized I/O (Low Priority)
+- [ ] Memory-mapped file access for specific use cases
+- [ ] Binary format only (ASCII/compressed not suitable)
+- [ ] Point cloud database/server applications
+- [ ] Real-time robotics with massive reference maps
+- [ ] Shared memory between processes
+- [ ] Random access API for spatial queries
+- [ ] Platform-specific optimizations (Linux, Windows, macOS)
+- [ ] Benchmark vs chunked streaming approach
 
 ## Phase 7: 1.0 Stabilization
 

@@ -20,6 +20,7 @@ let mut writer = WriterInit {
         ("y", ValueKind::F32, 1),
         ("z", ValueKind::F32, 1),
     ])),
+    version: None,
 }
 .create("output.pcd")?;
 ```
@@ -44,6 +45,7 @@ let mut writer = WriterInit {
     viewpoint: Default::default(),
     data_kind: DataKind::Ascii,
     schema: Some(schema),
+    version: None,
 }
 .create("lidar.pcd")?;
 ```
@@ -68,6 +70,7 @@ let mut writer: Writer<Point, _> = WriterInit {
     viewpoint: Default::default(),
     data_kind: DataKind::Binary,
     schema: None, // Inferred from Point
+    version: None,
 }
 .create("output.pcd")?;
 ```
@@ -122,6 +125,7 @@ let mut writer: Writer<PointRGB, _> = WriterInit {
     viewpoint: Default::default(),
     data_kind: DataKind::Binary,
     schema: None,
+    version: None,
 }
 .create("rgb_cloud.pcd")?;
 
@@ -151,6 +155,7 @@ let mut writer = WriterInit {
     viewpoint: Default::default(),
     data_kind: DataKind::Ascii, // Text format
     schema: Some(schema),
+    version: None,
 }
 .create("readable.pcd")?;
 ```
@@ -172,6 +177,7 @@ let mut writer = WriterInit {
     viewpoint: Default::default(),
     data_kind: DataKind::Binary, // Binary format
     schema: Some(schema),
+    version: None,
 }
 .create("efficient.pcd")?;
 ```
@@ -191,6 +197,7 @@ let mut writer = WriterInit {
     viewpoint: Default::default(),
     data_kind: DataKind::BinaryCompressed,
     schema: Some(schema),
+    version: None,
 }
 .create("compressed.pcd")?;
 ```
@@ -215,6 +222,7 @@ let mut writer = WriterInit {
         ("z", ValueKind::F32, 1),
         ("rgb", ValueKind::F32, 1),
     ])),
+    version: None,
 }
 .create("organized.pcd")?;
 
@@ -263,6 +271,7 @@ let mut writer = WriterInit {
     viewpoint,
     data_kind: DataKind::Binary,
     schema: Some(schema),
+    version: None,
 }
 .create("with_viewpoint.pcd")?;
 ```
@@ -389,9 +398,10 @@ fn convert_format(input: &str, output: &str, format: DataKind) -> Result<()> {
         viewpoint: meta.viewpoint.clone(),
         data_kind: format,  // New format
         schema: Some(meta.schema.clone()),
+        version: None,
     }
     .create(output)?;
-    
+
     // Copy points
     for point in reader {
         writer.push(&point?)?;
@@ -423,9 +433,10 @@ fn filter_and_write(input: &str, output: &str) -> Result<()> {
         viewpoint: meta.viewpoint.clone(),
         data_kind: meta.data_kind.clone(),
         schema: Some(meta.schema.clone()),
+        version: None,
     }
     .create(output)?;
-    
+
     for point in reader {
         let point = point?;
         if is_valid_point(&Ok(point.clone())) {

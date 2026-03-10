@@ -88,6 +88,7 @@ fn main() -> pcd_rs::Result<()> {
         viewpoint: Default::default(),
         data_kind: DataKind::Ascii,
         schema: Some(schema),
+        version: None,
     }
     .create("output.pcd")?;
     
@@ -151,6 +152,7 @@ fn main() -> pcd_rs::Result<()> {
         viewpoint: Default::default(),
         data_kind: DataKind::Binary,
         schema: None, // Schema inferred from type
+        version: None,
     }
     .create("output.pcd")?;
     
@@ -165,8 +167,4 @@ fn main() -> pcd_rs::Result<()> {
 
 ## Next Steps
 
-Now that you understand the basics, explore:
-
-- [Reading PCD Files](./reading_pcd.md) for advanced reading techniques
-- [Writing PCD Files](./writing_pcd.md) for output options
-- [Static vs Dynamic API](./static_vs_dynamic.md) to choose the right approach
+Now that you understand the basics, explore the other docs in `docs/guide/` for advanced reading/writing techniques and choosing between the static and dynamic APIs.

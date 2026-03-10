@@ -79,6 +79,7 @@ pub struct WriterInit {
     pub viewpoint: ViewPoint,
     pub data_kind: DataKind,
     pub schema: Option<Schema>,
+    pub version: Option<String>,
 }
 
 impl WriterInit {
@@ -314,6 +315,7 @@ fn write_points(points: Vec<(f32, f32, f32)>) -> Result<()> {
             ("y", ValueKind::F32, 1),
             ("z", ValueKind::F32, 1),
         ])),
+        version: None,
     }
     .create("output.pcd")?;
     
@@ -355,13 +357,14 @@ fn process_typed() -> Result<()> {
         viewpoint: Default::default(),
         data_kind: DataKind::Binary,
         schema: None,
+        version: None,
     }
     .create("output.pcd")?;
-    
+
     for point in points {
         writer.push(&point)?;
     }
-    
+
     writer.finish()
 }
 ```

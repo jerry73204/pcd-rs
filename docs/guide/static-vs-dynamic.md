@@ -56,6 +56,7 @@ fn convert_pcd(input: &str, output: &str) -> Result<()> {
         viewpoint: meta.viewpoint,
         data_kind: DataKind::Binary,
         schema: Some(meta.schema),
+        version: None,
     }
     .create(output)?;
     
@@ -142,6 +143,7 @@ fn write_lidar_points(points: &[LidarPoint], path: &str) -> Result<()> {
         viewpoint: Default::default(),
         data_kind: DataKind::Binary,
         schema: None, // Inferred from type
+        version: None,
     }
     .create(path)?;
     

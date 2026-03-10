@@ -89,6 +89,7 @@ pub struct WriterInit {
     pub viewpoint: ViewPoint,
     pub data_kind: DataKind,
     pub schema: Option<Schema>,
+    pub version: Option<String>,
 }
 ```
 
