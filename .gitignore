@@ -7,3 +7,12 @@
 /target
 **/*.rs.bk
 Cargo.lock
+
+# Test artifacts (generated during test runs)
+# Only pcd-rs/test_files/ascii.pcd and binary.pcd are committed fixtures.
+pcd-rs/test_files/*.pcd
+!pcd-rs/test_files/ascii.pcd
+!pcd-rs/test_files/binary.pcd
+
+# Workspace-root test_files are example outputs, not fixtures
+/test_files/
