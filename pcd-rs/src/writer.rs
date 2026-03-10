@@ -208,16 +208,7 @@ where
 
             let size_args: Vec<_> = record_spec
                 .iter()
-                .map(|field| {
-                    use ValueKind::*;
-                    let size = match field.kind {
-                        U8 | I8 => 1,
-                        U16 | I16 => 2,
-                        U32 | I32 | F32 => 4,
-                        F64 => 8,
-                    };
-                    size.to_string()
-                })
+                .map(|field| field.kind.byte_size().to_string())
                 .collect();
 
             let type_args: Vec<_> = record_spec
@@ -225,8 +216,8 @@ where
                 .map(|field| {
                     use ValueKind::*;
                     match field.kind {
-                        U8 | U16 | U32 => "U",
-                        I8 | I16 | I32 => "I",
+                        U8 | U16 | U32 | U64 => "U",
+                        I8 | I16 | I32 | I64 => "I",
                         F32 | F64 => "F",
                     }
                 })

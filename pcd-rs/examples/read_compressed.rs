@@ -55,6 +55,8 @@ fn main() -> pcd_rs::Result<()> {
                             pcd_rs::Field::U8(vals) => println!("U8 = {:?}", vals),
                             pcd_rs::Field::U16(vals) => println!("U16 = {:?}", vals),
                             pcd_rs::Field::U32(vals) => println!("U32 = {:?}", vals),
+                            pcd_rs::Field::I64(vals) => println!("I64 = {:?}", vals),
+                            pcd_rs::Field::U64(vals) => println!("U64 = {:?}", vals),
                         }
                     }
                 }

@@ -3,77 +3,109 @@ use crate::{
     metas::{DataKind, FieldDef, PcdMeta, Schema, TypeKind, ValueKind, ViewPoint},
     Result,
 };
-use std::{collections::HashSet, io::prelude::*};
+use std::{
+    collections::{HashMap, HashSet},
+    io::prelude::*,
+};
+
+/// Known header entry names. DATA must be last (signals end of header).
+const KNOWN_ENTRIES: &[&str] = &[
+    "VERSION",
+    "FIELDS",
+    "COLUMNS",
+    "SIZE",
+    "TYPE",
+    "COUNT",
+    "WIDTH",
+    "HEIGHT",
+    "VIEWPOINT",
+    "POINTS",
+    "DATA",
+];
 
 pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<PcdMeta> {
-    let mut get_meta_line = |expect_entry: &str| -> Result<_> {
-        loop {
-            let mut line = String::new();
-            let read_size = reader.read_line(&mut line)?;
-            *line_count += 1;
+    // Parse all header lines into a map. Stop when we see DATA.
+    let mut header: HashMap<String, Vec<String>> = HashMap::new();
+    loop {
+        let mut line = String::new();
+        let read_size = reader.read_line(&mut line)?;
+        *line_count += 1;
 
-            if read_size == 0 {
-                return Err(Error::new_parse_error(
-                    *line_count,
-                    "Unexpected end of file",
-                ));
-            }
-
-            let line_stripped = match line.split('#').next() {
-                Some("") => continue,
-                Some(remaining) => remaining,
-                None => continue,
-            };
-
-            let tokens: Vec<String> = line_stripped
-                .split_ascii_whitespace()
-                .map(|s| s.to_owned())
-                .collect();
-
-            if tokens.is_empty() {
-                let desc = format!("Cannot parse empty line at line {}", *line_count + 1);
-                return Err(Error::new_parse_error(*line_count, &desc));
-            }
-
-            if tokens[0] != expect_entry {
-                let desc = format!(
-                    "Expect {:?} entry, found {:?} at line {}",
-                    expect_entry,
-                    tokens[0],
-                    *line_count + 1
-                );
-                return Err(Error::new_parse_error(*line_count, &desc));
-            }
-
-            return Ok(tokens);
+        if read_size == 0 {
+            return Err(Error::new_parse_error(
+                *line_count,
+                "Unexpected end of file before DATA line",
+            ));
         }
+
+        // Strip comments
+        let line_stripped = match line.split('#').next() {
+            Some(remaining) => remaining,
+            None => continue,
+        };
+
+        let tokens: Vec<String> = line_stripped
+            .split_ascii_whitespace()
+            .map(|s| s.to_owned())
+            .collect();
+
+        if tokens.is_empty() {
+            continue;
+        }
+
+        let key = tokens[0].to_uppercase();
+
+        if !KNOWN_ENTRIES.contains(&key.as_str()) {
+            // Skip unknown header entries
+            continue;
+        }
+
+        header.insert(key.clone(), tokens);
+
+        if key == "DATA" {
+            break;
+        }
+    }
+
+    // Helper to get a required entry
+    let get_required = |key: &str| -> Result<&Vec<String>> {
+        header.get(key).ok_or_else(|| {
+            Error::new_parse_error(*line_count, &format!("{} entry not found in header", key))
+        })
     };
 
+    // VERSION (required)
     let meta_version = {
-        let tokens = get_meta_line("VERSION")?;
-        if tokens.len() == 2 {
-            match tokens[1].as_str() {
-                "0.7" | ".7" => String::from("0.7"),
-                "0.6" | ".6" => String::from("0.6"),
-                "0.5" | ".5" => String::from("0.5"),
-                _ => {
-                    let desc = format!(
-                        "Unsupported version {:?}. Supported versions are: 0.5, 0.6, 0.7",
-                        tokens[1]
-                    );
-                    return Err(Error::new_parse_error(*line_count, &desc));
-                }
-            }
-        } else {
+        let tokens = get_required("VERSION")?;
+        if tokens.len() != 2 {
             return Err(Error::new_parse_error(
                 *line_count,
                 "VERSION line is not understood",
             ));
         }
+        match tokens[1].as_str() {
+            "0.7" | ".7" => String::from("0.7"),
+            "0.6" | ".6" => String::from("0.6"),
+            "0.5" | ".5" => String::from("0.5"),
+            _ => {
+                let desc = format!(
+                    "Unsupported version {:?}. Supported versions are: 0.5, 0.6, 0.7",
+                    tokens[1]
+                );
+                return Err(Error::new_parse_error(*line_count, &desc));
+            }
+        }
     };
 
+    // FIELDS or COLUMNS (required, COLUMNS is a PCL backward-compat alias)
     let meta_fields = {
-        let tokens = get_meta_line("FIELDS")?;
+        let tokens = header
+            .get("FIELDS")
+            .or_else(|| header.get("COLUMNS"))
+            .ok_or_else(|| {
+                Error::new_parse_error(*line_count, "FIELDS (or COLUMNS) entry not found in header")
+            })?;
+
         if tokens.len() == 1 {
             return Err(Error::new_parse_error(
                 *line_count,
@@ -86,178 +118,152 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
 
         for (idx, tk) in tokens[1..].iter().enumerate() {
             let mut field = tk.clone();
-            // If this field is just an underscore, it was meant to be skipped. Label it as
-            // unknown_field_{idx}
             if field == "_" {
                 field = format!("unknown_field_{idx}");
             }
 
-            if name_set.contains(&field.clone()) {
+            if name_set.contains(&field) {
                 let desc = format!("field name {:?} is specified more than once", field);
                 return Err(Error::new_parse_error(*line_count, &desc));
             }
 
             name_set.insert(field.clone());
-            field_names.push(field.to_owned());
+            field_names.push(field);
         }
 
         field_names
     };
 
+    let num_fields = meta_fields.len();
+
+    // SIZE (required)
     let meta_size = {
-        let tokens = get_meta_line("SIZE")?;
-        if tokens.len() == 1 {
+        let tokens = get_required("SIZE")?;
+        if tokens.len() < 2 {
             return Err(Error::new_parse_error(
                 *line_count,
                 "SIZE line is not understood",
             ));
         }
-
-        let mut sizes = vec![];
-        for tk in tokens[1..].iter() {
-            let size: u64 = tk.parse()?;
-            sizes.push(size);
-        }
-
-        sizes
+        tokens[1..]
+            .iter()
+            .map(|tk| Ok(tk.parse::<u64>()?))
+            .collect::<Result<Vec<_>>>()?
     };
 
+    // TYPE (required)
     let meta_type = {
-        let tokens = get_meta_line("TYPE")?;
-
-        if tokens.len() == 1 {
+        let tokens = get_required("TYPE")?;
+        if tokens.len() < 2 {
             return Err(Error::new_parse_error(
                 *line_count,
                 "TYPE line is not understood",
             ));
         }
-
-        let mut types = vec![];
-        for type_char in tokens[1..].iter() {
-            let type_ = match type_char.as_str() {
-                "I" => TypeKind::I,
-                "U" => TypeKind::U,
-                "F" => TypeKind::F,
+        tokens[1..]
+            .iter()
+            .map(|type_char| match type_char.as_str() {
+                "I" => Ok(TypeKind::I),
+                "U" => Ok(TypeKind::U),
+                "F" => Ok(TypeKind::F),
                 _ => {
                     let desc = format!("Invalid type character {:?} in TYPE line", type_char);
-                    return Err(Error::new_parse_error(*line_count, &desc));
+                    Err(Error::new_parse_error(*line_count, &desc))
                 }
-            };
-            types.push(type_);
-        }
-
-        types
+            })
+            .collect::<Result<Vec<_>>>()?
     };
 
-    let meta_count = {
-        let tokens = get_meta_line("COUNT")?;
-
-        if tokens.len() == 1 {
+    // COUNT (optional, defaults to 1 for each field)
+    let meta_count: Vec<u64> = if let Some(tokens) = header.get("COUNT") {
+        if tokens.len() < 2 {
             return Err(Error::new_parse_error(
                 *line_count,
                 "COUNT line is not understood",
             ));
         }
-
-        let mut counts = vec![];
-        for tk in tokens[1..].iter() {
-            let count: u64 = tk.parse()?;
-            counts.push(count);
-        }
-
-        counts
+        tokens[1..]
+            .iter()
+            .map(|tk| {
+                let count: u64 = tk.parse()?;
+                // PCL treats COUNT 0 as 1
+                Ok(if count == 0 { 1 } else { count })
+            })
+            .collect::<Result<Vec<_>>>()?
+    } else {
+        vec![1; num_fields]
     };
 
+    // WIDTH (required)
     let meta_width = {
-        let tokens = get_meta_line("WIDTH")?;
-
+        let tokens = get_required("WIDTH")?;
         if tokens.len() != 2 {
             return Err(Error::new_parse_error(
                 *line_count,
                 "WIDTH line is not understood",
             ));
         }
-
-        let width: u64 = tokens[1].parse()?;
-        width
+        tokens[1].parse::<u64>()?
     };
 
+    // HEIGHT (required)
     let meta_height = {
-        let tokens = get_meta_line("HEIGHT")?;
+        let tokens = get_required("HEIGHT")?;
         if tokens.len() != 2 {
             return Err(Error::new_parse_error(
                 *line_count,
                 "HEIGHT line is not understood",
             ));
         }
-
-        let height: u64 = tokens[1].parse()?;
-        height
+        tokens[1].parse::<u64>()?
     };
 
-    let meta_viewpoint = {
-        // VIEWPOINT field was introduced in version 0.7
-        // For versions 0.5 and 0.6, use default values
-        if meta_version == "0.5" || meta_version == "0.6" {
-            ViewPoint::default()
-        } else {
-            let tokens = get_meta_line("VIEWPOINT")?;
-
-            if tokens.len() != 8 {
-                return Err(Error::new_parse_error(
-                    *line_count,
-                    "VIEWPOINT line is not understood",
-                ));
-            }
-
-            let tx = tokens[1].parse()?;
-            let ty = tokens[2].parse()?;
-            let tz = tokens[3].parse()?;
-            let qw = tokens[4].parse()?;
-            let qx = tokens[5].parse()?;
-            let qy = tokens[6].parse()?;
-            let qz = tokens[7].parse()?;
-            ViewPoint {
-                tx,
-                ty,
-                tz,
-                qw,
-                qx,
-                qy,
-                qz,
-            }
+    // VIEWPOINT (optional, defaults to identity)
+    let meta_viewpoint = if let Some(tokens) = header.get("VIEWPOINT") {
+        if tokens.len() != 8 {
+            return Err(Error::new_parse_error(
+                *line_count,
+                "VIEWPOINT line is not understood",
+            ));
         }
+        ViewPoint {
+            tx: tokens[1].parse()?,
+            ty: tokens[2].parse()?,
+            tz: tokens[3].parse()?,
+            qw: tokens[4].parse()?,
+            qx: tokens[5].parse()?,
+            qy: tokens[6].parse()?,
+            qz: tokens[7].parse()?,
+        }
+    } else {
+        ViewPoint::default()
     };
 
+    // POINTS (required)
     let meta_points = {
-        let tokens = get_meta_line("POINTS")?;
-
+        let tokens = get_required("POINTS")?;
         if tokens.len() != 2 {
             return Err(Error::new_parse_error(
                 *line_count,
                 "POINTS line is not understood",
             ));
         }
-
-        let count: u64 = tokens[1].parse()?;
-        count
+        tokens[1].parse::<u64>()?
     };
 
+    // DATA (required, already confirmed present)
     let meta_data = {
-        let tokens = get_meta_line("DATA")?;
-
+        let tokens = get_required("DATA")?;
         if tokens.len() != 2 {
             return Err(Error::new_parse_error(
                 *line_count,
                 "DATA line is not understood",
             ));
         }
-
         match tokens[1].as_str() {
             "ascii" => DataKind::Ascii,
             "binary" => DataKind::Binary,
             "binary_compressed" => {
-                // binary_compressed format was introduced in version 0.7
                 if meta_version != "0.7" {
                     let desc = format!(
                         "binary_compressed format is only supported in PCD version 0.7, found version {}",
@@ -276,64 +282,67 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
         }
     };
 
-    // Check integrity
-    if meta_size.len() != meta_fields.len() {
+    // Validate field counts match
+    if meta_size.len() != num_fields {
         return Err(Error::new_parse_error(
             *line_count,
-            "SIZE entry conflicts with FIELD entry",
+            "SIZE entry conflicts with FIELDS entry",
         ));
     }
 
-    if meta_type.len() != meta_fields.len() {
+    if meta_type.len() != num_fields {
         return Err(Error::new_parse_error(
             *line_count,
-            "TYPE entry conflicts with FIELD entry",
+            "TYPE entry conflicts with FIELDS entry",
         ));
     }
 
-    if meta_count.len() != meta_fields.len() {
+    if meta_count.len() != num_fields {
         return Err(Error::new_parse_error(
             *line_count,
-            "COUNT entry conflicts with FIELD entry",
+            "COUNT entry conflicts with FIELDS entry",
         ));
     }
 
-    // Organize field type
-    let field_defs: Result<Schema> = {
-        meta_fields
-            .iter()
-            .zip(meta_type.iter())
-            .zip(meta_size.iter())
-            .zip(meta_count.iter())
-            .map(|(((name, type_), size), &count)| {
-                let kind = match (type_, size) {
-                    (TypeKind::U, 1) => ValueKind::U8,
-                    (TypeKind::U, 2) => ValueKind::U16,
-                    (TypeKind::U, 4) => ValueKind::U32,
-                    (TypeKind::I, 1) => ValueKind::I8,
-                    (TypeKind::I, 2) => ValueKind::I16,
-                    (TypeKind::I, 4) => ValueKind::I32,
-                    (TypeKind::F, 4) => ValueKind::F32,
-                    (TypeKind::F, 8) => ValueKind::F64,
-                    _ => {
-                        let desc =
-                            format!("Field type {:?} with size {} is not supported", type_, size);
-                        return Err(Error::new_parse_error(*line_count, &desc));
-                    }
-                };
+    // Note: WIDTH * HEIGHT may not equal POINTS in files from some writers.
+    // PCL validates this strictly, but many tools (including our own writer,
+    // which pre-declares WIDTH) may produce mismatches. We trust POINTS as
+    // the authoritative count.
 
-                let meta = FieldDef {
-                    name: name.to_owned(),
-                    kind,
-                    count,
-                };
+    // Build field definitions
+    let field_defs: Result<Schema> = meta_fields
+        .iter()
+        .zip(meta_type.iter())
+        .zip(meta_size.iter())
+        .zip(meta_count.iter())
+        .map(|(((name, type_), size), &count)| {
+            let kind = match (type_, size) {
+                (TypeKind::U, 1) => ValueKind::U8,
+                (TypeKind::U, 2) => ValueKind::U16,
+                (TypeKind::U, 4) => ValueKind::U32,
+                (TypeKind::U, 8) => ValueKind::U64,
+                (TypeKind::I, 1) => ValueKind::I8,
+                (TypeKind::I, 2) => ValueKind::I16,
+                (TypeKind::I, 4) => ValueKind::I32,
+                (TypeKind::I, 8) => ValueKind::I64,
+                (TypeKind::F, 4) => ValueKind::F32,
+                (TypeKind::F, 8) => ValueKind::F64,
+                _ => {
+                    let desc =
+                        format!("Field type {:?} with size {} is not supported", type_, size);
+                    return Err(Error::new_parse_error(*line_count, &desc));
+                }
+            };
 
-                Ok(meta)
+            Ok(FieldDef {
+                name: name.to_owned(),
+                kind,
+                count,
             })
-            .collect()
-    };
+        })
+        .collect();
 
-    let meta = PcdMeta {
+    Ok(PcdMeta {
         version: meta_version,
         field_defs: field_defs?,
         width: meta_width,
@@ -341,7 +350,5 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
         viewpoint: meta_viewpoint,
         num_points: meta_points,
         data: meta_data,
-    };
-
-    Ok(meta)
+    })
 }

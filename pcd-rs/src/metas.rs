@@ -62,11 +62,25 @@ pub enum ValueKind {
     U8,
     U16,
     U32,
+    U64,
     I8,
     I16,
     I32,
+    I64,
     F32,
     F64,
+}
+
+impl ValueKind {
+    /// Returns the byte size of a value of this kind.
+    pub fn byte_size(&self) -> usize {
+        match self {
+            ValueKind::U8 | ValueKind::I8 => 1,
+            ValueKind::U16 | ValueKind::I16 => 2,
+            ValueKind::U32 | ValueKind::I32 | ValueKind::F32 => 4,
+            ValueKind::U64 | ValueKind::I64 | ValueKind::F64 => 8,
+        }
+    }
 }
 
 /// Define the properties of a PCD field.

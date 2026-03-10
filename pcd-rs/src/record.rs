@@ -105,9 +105,11 @@ pub enum Field {
     I8(Vec<i8>),
     I16(Vec<i16>),
     I32(Vec<i32>),
+    I64(Vec<i64>),
     U8(Vec<u8>),
     U16(Vec<u16>),
     U32(Vec<u32>),
+    U64(Vec<u64>),
     F32(Vec<f32>),
     F64(Vec<f64>),
 }
@@ -121,9 +123,11 @@ impl Field {
             F::I8(_) => K::I8,
             F::I16(_) => K::I16,
             F::I32(_) => K::I32,
+            F::I64(_) => K::I64,
             F::U8(_) => K::U8,
             F::U16(_) => K::U16,
             F::U32(_) => K::U32,
+            F::U64(_) => K::U64,
             F::F32(_) => K::F32,
             F::F64(_) => K::F64,
         }
@@ -136,9 +140,11 @@ impl Field {
             F::I8(values) => values.len(),
             F::I16(values) => values.len(),
             F::I32(values) => values.len(),
+            F::I64(values) => values.len(),
             F::U8(values) => values.len(),
             F::U16(values) => values.len(),
             F::U32(values) => values.len(),
+            F::U64(values) => values.len(),
             F::F32(values) => values.len(),
             F::F64(values) => values.len(),
         }
@@ -167,6 +173,10 @@ impl Field {
                 &[t] => T::from(t)?,
                 _ => return None,
             },
+            F::I64(v) => match &**v {
+                &[t] => T::from(t)?,
+                _ => return None,
+            },
             F::U8(v) => match &**v {
                 &[t] => T::from(t)?,
                 _ => return None,
@@ -176,6 +186,10 @@ impl Field {
                 _ => return None,
             },
             F::U32(v) => match &**v {
+                &[t] => T::from(t)?,
+                _ => return None,
+            },
+            F::U64(v) => match &**v {
                 &[t] => T::from(t)?,
                 _ => return None,
             },
@@ -217,9 +231,11 @@ impl DynRecord {
                     (F::I8(_), K::I8)
                         | (F::I16(_), K::I16)
                         | (F::I32(_), K::I32)
+                        | (F::I64(_), K::I64)
                         | (F::U8(_), K::U8)
                         | (F::U16(_), K::U16)
                         | (F::U32(_), K::U32)
+                        | (F::U64(_), K::U64)
                         | (F::F32(_), K::F32)
                         | (F::F64(_), K::F64)
                 )
@@ -249,6 +265,10 @@ impl DynRecord {
                 (&[x], &[y], &[z]) => [T::from(x)?, T::from(y)?, T::from(z)?],
                 _ => return None,
             },
+            [F::I64(xv), F::I64(yv), F::I64(zv), ..] => match (&**xv, &**yv, &**zv) {
+                (&[x], &[y], &[z]) => [T::from(x)?, T::from(y)?, T::from(z)?],
+                _ => return None,
+            },
             [F::U8(xv), F::U8(yv), F::U8(zv), ..] => match (&**xv, &**yv, &**zv) {
                 (&[x], &[y], &[z]) => [T::from(x)?, T::from(y)?, T::from(z)?],
                 _ => return None,
@@ -258,6 +278,10 @@ impl DynRecord {
                 _ => return None,
             },
             [F::U32(xv), F::U32(yv), F::U32(zv), ..] => match (&**xv, &**yv, &**zv) {
+                (&[x], &[y], &[z]) => [T::from(x)?, T::from(y)?, T::from(z)?],
+                _ => return None,
+            },
+            [F::U64(xv), F::U64(yv), F::U64(zv), ..] => match (&**xv, &**yv, &**zv) {
                 (&[x], &[y], &[z]) => [T::from(x)?, T::from(y)?, T::from(z)?],
                 _ => return None,
             },
@@ -316,6 +340,12 @@ impl PcdSerialize for DynRecord {
                         .map(|val| Ok(writer.write_i32::<LittleEndian>(*val)?))
                         .collect::<Result<Vec<_>>>()?;
                 }
+                F::I64(values) => {
+                    values
+                        .iter()
+                        .map(|val| Ok(writer.write_i64::<LittleEndian>(*val)?))
+                        .collect::<Result<Vec<_>>>()?;
+                }
                 F::U8(values) => {
                     values
                         .iter()
@@ -332,6 +362,12 @@ impl PcdSerialize for DynRecord {
                     values
                         .iter()
                         .map(|val| Ok(writer.write_u32::<LittleEndian>(*val)?))
+                        .collect::<Result<Vec<_>>>()?;
+                }
+                F::U64(values) => {
+                    values
+                        .iter()
+                        .map(|val| Ok(writer.write_u64::<LittleEndian>(*val)?))
                         .collect::<Result<Vec<_>>>()?;
                 }
                 F::F32(values) => {
@@ -381,6 +417,10 @@ impl PcdSerialize for DynRecord {
                     let iter = values.iter().map(|val| val.to_string());
                     tokens.extend(iter);
                 }
+                F::I64(values) => {
+                    let iter = values.iter().map(|val| val.to_string());
+                    tokens.extend(iter);
+                }
                 F::U8(values) => {
                     let iter = values.iter().map(|val| val.to_string());
                     tokens.extend(iter);
@@ -390,6 +430,10 @@ impl PcdSerialize for DynRecord {
                     tokens.extend(iter);
                 }
                 F::U32(values) => {
+                    let iter = values.iter().map(|val| val.to_string());
+                    tokens.extend(iter);
+                }
+                F::U64(values) => {
                     let iter = values.iter().map(|val| val.to_string());
                     tokens.extend(iter);
                 }
@@ -449,6 +493,12 @@ impl PcdDeserialize for DynRecord {
                             .collect::<Result<Vec<_>>>()?;
                         F::I32(values)
                     }
+                    K::I64 => {
+                        let values = counter
+                            .map(|_| Ok(reader.read_i64::<LittleEndian>()?))
+                            .collect::<Result<Vec<_>>>()?;
+                        F::I64(values)
+                    }
                     K::U8 => {
                         let values = counter
                             .map(|_| Ok(reader.read_u8()?))
@@ -466,6 +516,12 @@ impl PcdDeserialize for DynRecord {
                             .map(|_| Ok(reader.read_u32::<LittleEndian>()?))
                             .collect::<Result<Vec<_>>>()?;
                         F::U32(values)
+                    }
+                    K::U64 => {
+                        let values = counter
+                            .map(|_| Ok(reader.read_u64::<LittleEndian>()?))
+                            .collect::<Result<Vec<_>>>()?;
+                        F::U64(values)
                     }
                     K::F32 => {
                         let values = counter
@@ -530,6 +586,13 @@ impl PcdDeserialize for DynRecord {
                             .try_collect()?;
                         Field::I32(values)
                     }
+                    ValueKind::I64 => {
+                        let values: Vec<i64> = (&mut tokens_iter)
+                            .map(|token| token.parse())
+                            .take(count)
+                            .try_collect()?;
+                        Field::I64(values)
+                    }
                     ValueKind::U8 => {
                         let values: Vec<u8> = (&mut tokens_iter)
                             .map(|token| token.parse())
@@ -550,6 +613,13 @@ impl PcdDeserialize for DynRecord {
                             .take(count)
                             .try_collect()?;
                         Field::U32(values)
+                    }
+                    ValueKind::U64 => {
+                        let values: Vec<u64> = (&mut tokens_iter)
+                            .map(|token| token.parse())
+                            .take(count)
+                            .try_collect()?;
+                        Field::U64(values)
                     }
                     ValueKind::F32 => {
                         let values: Vec<f32> = (&mut tokens_iter)
@@ -646,7 +716,9 @@ macro_rules! impl_primitive {
 
 impl_primitive!(u16, U16, read_u16);
 impl_primitive!(u32, U32, read_u32);
+impl_primitive!(u64, U64, read_u64);
 impl_primitive!(i16, I16, read_i16);
 impl_primitive!(i32, I32, read_i32);
+impl_primitive!(i64, I64, read_i64);
 impl_primitive!(f32, F32, read_f32);
 impl_primitive!(f64, F64, read_f64);

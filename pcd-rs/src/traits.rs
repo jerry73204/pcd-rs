@@ -22,6 +22,10 @@ impl Value for u32 {
     const KIND: ValueKind = ValueKind::U32;
 }
 
+impl Value for u64 {
+    const KIND: ValueKind = ValueKind::U64;
+}
+
 impl Value for i8 {
     const KIND: ValueKind = ValueKind::I8;
 }
@@ -32,6 +36,10 @@ impl Value for i16 {
 
 impl Value for i32 {
     const KIND: ValueKind = ValueKind::I32;
+}
+
+impl Value for i64 {
+    const KIND: ValueKind = ValueKind::I64;
 }
 
 impl Value for f32 {

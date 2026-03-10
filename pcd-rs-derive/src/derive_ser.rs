@@ -213,6 +213,11 @@ fn make_rw_expr(type_ident: &Ident) -> Option<DerivedTokens> {
                 quote! { writer.write_u32::<LittleEndian>(value)? },
                 quote! { tokens.push(u32::to_string(&value)) },
             ),
+            "u64" => (
+                quote! { ::pcd_rs::metas::ValueKind::U64 },
+                quote! { writer.write_u64::<LittleEndian>(value)? },
+                quote! { tokens.push(u64::to_string(&value)) },
+            ),
             "i8" => (
                 quote! { ::pcd_rs::metas::ValueKind::I8 },
                 quote! { writer.write_i8(value)? },
@@ -227,6 +232,11 @@ fn make_rw_expr(type_ident: &Ident) -> Option<DerivedTokens> {
                 quote! { ::pcd_rs::metas::ValueKind::I32 },
                 quote! { writer.write_i32::<LittleEndian>(value)? },
                 quote! { tokens.push(i32::to_string(&value)) },
+            ),
+            "i64" => (
+                quote! { ::pcd_rs::metas::ValueKind::I64 },
+                quote! { writer.write_i64::<LittleEndian>(value)? },
+                quote! { tokens.push(i64::to_string(&value)) },
             ),
             "f32" => (
                 quote! { ::pcd_rs::metas::ValueKind::F32 },
