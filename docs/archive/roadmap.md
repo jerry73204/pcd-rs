@@ -28,27 +28,6 @@ Essential features for full PCD format compatibility.
 - [x] Compatibility tests with PCL-generated files
 - [x] Documentation of version differences
 
-### Chunked Streaming API (High Priority)
-
-**Why chunked streaming instead of memory-mapped files?**
-Most point cloud algorithms (downsampling, filtering, transformation) work perfectly with sequential chunk processing. Memory-mapped files only benefit narrow use cases like databases or real-time systems with random access patterns. Chunked streaming provides:
-- Universal format support (ASCII, binary, compressed)
-- Natural parallelism boundaries
-- Predictable memory usage
-- Simpler mental model
-
-**Implementation goals:**
-- [ ] Design chunked reader/writer API
-- [ ] Implement chunked reading for all formats (ASCII, binary, compressed)
-- [ ] Configurable chunk size based on memory constraints
-- [ ] Parallel chunk processing with rayon integration
-- [ ] Natural parallelism boundaries for multi-core processing
-- [ ] Support for files larger than available RAM
-- [ ] Progress callbacks and cancellation support
-- [ ] Zero-copy chunks for binary format
-- [ ] Streaming transformations and filters
-- [ ] Examples for common patterns (downsampling, filtering, statistics)
-
 ## Phase 2: Performance & Scalability
 
 Optimizations for large-scale point cloud processing.
@@ -57,10 +36,7 @@ Optimizations for large-scale point cloud processing.
 - [ ] Streaming writer without knowing total count upfront
 - [ ] Pipeline processing with backpressure handling
 - [ ] Multi-stage transformation pipelines
-- [ ] Automatic chunk size optimization
 - [ ] Memory usage monitoring and limits
-- [ ] Concurrent chunk readers for multiple files
-- [ ] Chunk-based spatial indexing
 - [ ] Streaming merge operations for multiple PCD files
 
 ### Parallel Processing
@@ -204,7 +180,7 @@ Integration with broader Rust and robotics ecosystem.
 - [ ] Shared memory between processes
 - [ ] Random access API for spatial queries
 - [ ] Platform-specific optimizations (Linux, Windows, macOS)
-- [ ] Benchmark vs chunked streaming approach
+- [ ] Benchmark vs streaming approach
 
 ## Phase 7: 1.0 Stabilization
 
@@ -296,9 +272,7 @@ Final preparations for stable release.
 **High Priority Contributions:**
 1. ~~Implement LZF compression~~ ✅ DONE
 2. ~~Add PCD v0.5/v0.6 support~~ ✅ DONE
-3. Create chunked streaming API (Phase 1)
-4. Add parallel chunk processing (Phase 1)
-5. Write command-line tools (Phase 5)
+3. Write command-line tools (Phase 5)
 
 **Good First Issues:**
 - Add more examples

@@ -251,20 +251,6 @@ let results: Vec<_> = points
     .collect();
 ```
 
-### Memory Management
-
-```rust
-// Process in chunks to limit memory usage
-let reader = DynReader::open("huge.pcd")?;
-let chunk_size = 10000;
-
-for chunk in &reader.chunks(chunk_size) {
-    let points: Vec<DynRecord> = chunk.collect::<Result<_, _>>()?;
-    process_chunk(&points);
-    // Chunk is dropped here, freeing memory
-}
-```
-
 ## Advanced Techniques
 
 ### Custom Deserializers

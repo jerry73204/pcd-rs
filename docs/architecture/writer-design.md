@@ -302,7 +302,6 @@ impl WriterInit {
 - Direct memory copies
 
 #### Compressed Buffering
-- Chunk-based compression
 - Compression buffer management
 - Metadata for decompression
 

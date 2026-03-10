@@ -231,23 +231,6 @@ impl<R: Read + Seek> DynReader<R> {
 }
 ```
 
-### Parallel Reading (Future)
-```rust
-pub struct ParallelReader<R> {
-    readers: Vec<DynReader<R>>,
-    chunk_size: usize,
-}
-
-impl<R: Read + Seek + Clone> ParallelReader<R> {
-    pub fn read_parallel(&mut self) -> Vec<Result<DynRecord>> {
-        self.readers
-            .par_iter_mut()
-            .flat_map(|reader| reader.by_ref().take(self.chunk_size))
-            .collect()
-    }
-}
-```
-
 ## Testing Strategy
 
 ### Unit Tests

@@ -264,18 +264,6 @@ Bottlenecks:
 
 ## Parallel Data Flow (Future)
 
-### Parallel Reading
-
-```
-PCD File
-    │
-    ├──→ Thread 1: Read chunk 1 ──→ Parse ──→ Queue ──┐
-    │                                                   │
-    ├──→ Thread 2: Read chunk 2 ──→ Parse ──→ Queue ──┼──→ Merge ──→ User
-    │                                                   │
-    └──→ Thread 3: Read chunk 3 ──→ Parse ──→ Queue ──┘
-```
-
 ### Parallel Writing
 
 ```
