@@ -12,6 +12,10 @@ env:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: crates-io
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -27,7 +31,22 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Publishing $CRATE version $VERSION"
 
+      - name: Wait for pcd-rs-derive on crates.io
+        if: steps.crate.outputs.name == 'pcd-rs'
+        run: |
+          DERIVE_VERSION=$(cargo metadata --format-version 1 --no-deps \
+            | jq -r '.packages[] | select(.name == "pcd-rs-derive") | .version')
+          echo "Waiting for pcd-rs-derive $DERIVE_VERSION on crates.io..."
+          for i in $(seq 1 30); do
+            if cargo search pcd-rs-derive 2>/dev/null | grep -q "pcd-rs-derive = \"$DERIVE_VERSION\""; then
+              echo "Found pcd-rs-derive $DERIVE_VERSION"
+              exit 0
+            fi
+            echo "Attempt $i/30: not yet available, waiting 10s..."
+            sleep 10
+          done
+          echo "::error::Timed out waiting for pcd-rs-derive $DERIVE_VERSION on crates.io"
+          exit 1
+
       - name: Publish ${{ steps.crate.outputs.name }}
         run: cargo publish -p ${{ steps.crate.outputs.name }}
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
