@@ -8,11 +8,11 @@ use syn::{
 };
 
 pub struct ItemStruct {
-    pub attrs: Vec<Attribute>,
-    pub vis: Visibility,
-    pub struct_token: Token![struct],
+    _attrs: Vec<Attribute>,
+    _vis: Visibility,
+    _struct_token: Token![struct],
     pub ident: Ident,
-    pub brace_token: token::Brace,
+    _brace_token: token::Brace,
     pub fields: Punctuated<Field, Token![,]>,
 }
 
@@ -20,11 +20,11 @@ impl Parse for ItemStruct {
     fn parse(input: ParseStream) -> Result<Self> {
         let content;
         Ok(ItemStruct {
-            attrs: input.call(Attribute::parse_outer)?,
-            vis: input.parse()?,
-            struct_token: input.parse()?,
+            _attrs: input.call(Attribute::parse_outer)?,
+            _vis: input.parse()?,
+            _struct_token: input.parse()?,
             ident: input.parse()?,
-            brace_token: braced!(content in input),
+            _brace_token: braced!(content in input),
             fields: content.parse_terminated(Field::parse_named, Token![,])?,
         })
     }
@@ -79,8 +79,8 @@ impl From<IgnoreAttr> for AttrOption {
 
 pub struct RenameAttr {
     pub ident: Ident,
-    pub eq_token: Token![=],
-    pub lit: LitStr,
+    _eq_token: Token![=],
+    _lit: LitStr,
     pub rename: String,
 }
 
@@ -107,8 +107,8 @@ impl Parse for AttrOption {
 
                 RenameAttr {
                     ident,
-                    eq_token,
-                    lit,
+                    _eq_token: eq_token,
+                    _lit: lit,
                     rename,
                 }
                 .into()
