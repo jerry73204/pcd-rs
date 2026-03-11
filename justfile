@@ -15,3 +15,6 @@ test:
     cargo nextest run --cargo-profile dev-release --no-fail-fast --all-features
 
 ci: check test
+
+clean:
+    cargo clean
