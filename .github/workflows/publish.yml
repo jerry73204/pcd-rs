@@ -35,13 +35,15 @@ jobs:
         run: |
           DERIVE_VERSION=$(cargo metadata --format-version 1 --no-deps \
             | jq -r '.packages[] | select(.name == "pcd-rs-derive") | .version')
+          URL="https://crates.io/api/v1/crates/pcd-rs-derive/$DERIVE_VERSION"
           echo "Waiting for pcd-rs-derive $DERIVE_VERSION on crates.io..."
-          for i in $(seq 1 30); do
-            if cargo search pcd-rs-derive 2>/dev/null | grep -q "pcd-rs-derive = \"$DERIVE_VERSION\""; then
+          for i in $(seq 1 60); do
+            STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$URL")
+            if [ "$STATUS" = "200" ]; then
               echo "Found pcd-rs-derive $DERIVE_VERSION"
               exit 0
             fi
-            echo "Attempt $i/30: not yet available, waiting 10s..."
+            echo "Attempt $i/60: HTTP $STATUS, waiting 10s..."
             sleep 10
           done
           echo "::error::Timed out waiting for pcd-rs-derive $DERIVE_VERSION on crates.io"
