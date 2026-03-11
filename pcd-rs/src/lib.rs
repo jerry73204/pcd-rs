@@ -83,6 +83,7 @@
 //!     viewpoint: Default::default(),
 //!     data_kind: DataKind::Ascii,
 //!     schema: Some(Schema::from_iter(schema)),
+//!     version: None,
 //! }
 //! .create("test_files/dump_ascii_untyped.pcd")?;
 //!
@@ -127,7 +128,7 @@ pub struct Point {
 }
 
 let reader = Reader::open("test_files/ascii.pcd")?;
-let points: Result<Vec<Point>> = reader.collect();
+let points: pcd_rs::Result<Vec<Point>> = reader.collect();
 println!("{} points found", points?.len());
 # Ok(())
 # }
@@ -176,6 +177,7 @@ let mut writer = WriterInit {
     viewpoint: Default::default(),
     data_kind: DataKind::Ascii,
     schema: None,
+    version: None,
 }
 .create("test_files/dump_ascii_static.pcd")?;
 
