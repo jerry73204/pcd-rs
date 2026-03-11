@@ -21,7 +21,7 @@ pub struct Point {
 
 fn main() -> pcd_rs::Result<()> {
     let reader = Reader::open("test_files/ascii.pcd")?;
-    let points: Result<Vec<Point>> = reader.collect();
+    let points: pcd_rs::Result<Vec<Point>> = reader.collect();
     assert_eq!(points?.len(), 213);
     Ok(())
 }

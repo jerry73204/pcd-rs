@@ -467,79 +467,90 @@ impl PcdDeserialize for DynRecord {
         use Field as F;
         use ValueKind as K;
 
-        let fields = field_defs
-            .iter()
-            .map(|def| {
-                let FieldDef { kind, count, .. } = *def;
+        let mut fields = Vec::with_capacity(field_defs.len());
 
-                let counter = 0..count;
+        for def in field_defs.iter() {
+            let FieldDef {
+                kind, count, name, ..
+            } = def;
+            let count = *count;
 
-                let field = match kind {
-                    K::I8 => {
-                        let values = counter
-                            .map(|_| Ok(reader.read_i8()?))
-                            .collect::<Result<Vec<_>>>()?;
-                        F::I8(values)
-                    }
-                    K::I16 => {
-                        let values = counter
-                            .map(|_| Ok(reader.read_i16::<LittleEndian>()?))
-                            .collect::<Result<Vec<_>>>()?;
-                        F::I16(values)
-                    }
-                    K::I32 => {
-                        let values = counter
-                            .map(|_| Ok(reader.read_i32::<LittleEndian>()?))
-                            .collect::<Result<Vec<_>>>()?;
-                        F::I32(values)
-                    }
-                    K::I64 => {
-                        let values = counter
-                            .map(|_| Ok(reader.read_i64::<LittleEndian>()?))
-                            .collect::<Result<Vec<_>>>()?;
-                        F::I64(values)
-                    }
-                    K::U8 => {
-                        let values = counter
-                            .map(|_| Ok(reader.read_u8()?))
-                            .collect::<Result<Vec<_>>>()?;
-                        F::U8(values)
-                    }
-                    K::U16 => {
-                        let values = counter
-                            .map(|_| Ok(reader.read_u16::<LittleEndian>()?))
-                            .collect::<Result<Vec<_>>>()?;
-                        F::U16(values)
-                    }
-                    K::U32 => {
-                        let values = counter
-                            .map(|_| Ok(reader.read_u32::<LittleEndian>()?))
-                            .collect::<Result<Vec<_>>>()?;
-                        F::U32(values)
-                    }
-                    K::U64 => {
-                        let values = counter
-                            .map(|_| Ok(reader.read_u64::<LittleEndian>()?))
-                            .collect::<Result<Vec<_>>>()?;
-                        F::U64(values)
-                    }
-                    K::F32 => {
-                        let values = counter
-                            .map(|_| Ok(reader.read_f32::<LittleEndian>()?))
-                            .collect::<Result<Vec<_>>>()?;
-                        F::F32(values)
-                    }
-                    K::F64 => {
-                        let values = counter
-                            .map(|_| Ok(reader.read_f64::<LittleEndian>()?))
-                            .collect::<Result<Vec<_>>>()?;
-                        F::F64(values)
-                    }
-                };
+            // For padding fields, read and discard the bytes
+            if name == "_" {
+                let skip_bytes = kind.byte_size() * count as usize;
+                let mut discard = vec![0u8; skip_bytes];
+                reader.read_exact(&mut discard)?;
+                continue;
+            }
 
-                Ok(field)
-            })
-            .collect::<Result<Vec<_>>>()?;
+            let counter = 0..count;
+
+            let field = match kind {
+                K::I8 => {
+                    let values = counter
+                        .map(|_| Ok(reader.read_i8()?))
+                        .collect::<Result<Vec<_>>>()?;
+                    F::I8(values)
+                }
+                K::I16 => {
+                    let values = counter
+                        .map(|_| Ok(reader.read_i16::<LittleEndian>()?))
+                        .collect::<Result<Vec<_>>>()?;
+                    F::I16(values)
+                }
+                K::I32 => {
+                    let values = counter
+                        .map(|_| Ok(reader.read_i32::<LittleEndian>()?))
+                        .collect::<Result<Vec<_>>>()?;
+                    F::I32(values)
+                }
+                K::I64 => {
+                    let values = counter
+                        .map(|_| Ok(reader.read_i64::<LittleEndian>()?))
+                        .collect::<Result<Vec<_>>>()?;
+                    F::I64(values)
+                }
+                K::U8 => {
+                    let values = counter
+                        .map(|_| Ok(reader.read_u8()?))
+                        .collect::<Result<Vec<_>>>()?;
+                    F::U8(values)
+                }
+                K::U16 => {
+                    let values = counter
+                        .map(|_| Ok(reader.read_u16::<LittleEndian>()?))
+                        .collect::<Result<Vec<_>>>()?;
+                    F::U16(values)
+                }
+                K::U32 => {
+                    let values = counter
+                        .map(|_| Ok(reader.read_u32::<LittleEndian>()?))
+                        .collect::<Result<Vec<_>>>()?;
+                    F::U32(values)
+                }
+                K::U64 => {
+                    let values = counter
+                        .map(|_| Ok(reader.read_u64::<LittleEndian>()?))
+                        .collect::<Result<Vec<_>>>()?;
+                    F::U64(values)
+                }
+                K::F32 => {
+                    let values = counter
+                        .map(|_| Ok(reader.read_f32::<LittleEndian>()?))
+                        .collect::<Result<Vec<_>>>()?;
+                    F::F32(values)
+                }
+                K::F64 => {
+                    let values = counter
+                        .map(|_| Ok(reader.read_f64::<LittleEndian>()?))
+                        .collect::<Result<Vec<_>>>()?;
+                    F::F64(values)
+                }
+            };
+
+            fields.push(field);
+        }
+
         Ok(Self(fields))
     }
 
@@ -557,89 +568,97 @@ impl PcdDeserialize for DynRecord {
 
         let mut tokens_iter = tokens.into_iter();
 
-        let fields: Vec<Field> = field_defs
-            .iter()
-            .map(|def| -> Result<_, Error> {
-                let FieldDef { kind, count, .. } = *def;
+        let mut fields = Vec::with_capacity(field_defs.len());
 
-                let count = count as usize;
+        for def in field_defs.iter() {
+            let FieldDef {
+                kind, count, name, ..
+            } = def;
+            let count = *count as usize;
 
-                let field = match kind {
-                    ValueKind::I8 => {
-                        let values: Vec<i8> = (&mut tokens_iter)
-                            .map(|token| token.parse())
-                            .take(count)
-                            .try_collect()?;
-                        Field::I8(values)
-                    }
-                    ValueKind::I16 => {
-                        let values: Vec<i16> = (&mut tokens_iter)
-                            .map(|token| token.parse())
-                            .take(count)
-                            .try_collect()?;
-                        Field::I16(values)
-                    }
-                    ValueKind::I32 => {
-                        let values: Vec<i32> = (&mut tokens_iter)
-                            .map(|token| token.parse())
-                            .take(count)
-                            .try_collect()?;
-                        Field::I32(values)
-                    }
-                    ValueKind::I64 => {
-                        let values: Vec<i64> = (&mut tokens_iter)
-                            .map(|token| token.parse())
-                            .take(count)
-                            .try_collect()?;
-                        Field::I64(values)
-                    }
-                    ValueKind::U8 => {
-                        let values: Vec<u8> = (&mut tokens_iter)
-                            .map(|token| token.parse())
-                            .take(count)
-                            .try_collect()?;
-                        Field::U8(values)
-                    }
-                    ValueKind::U16 => {
-                        let values: Vec<u16> = (&mut tokens_iter)
-                            .map(|token| token.parse())
-                            .take(count)
-                            .try_collect()?;
-                        Field::U16(values)
-                    }
-                    ValueKind::U32 => {
-                        let values: Vec<u32> = (&mut tokens_iter)
-                            .map(|token| token.parse())
-                            .take(count)
-                            .try_collect()?;
-                        Field::U32(values)
-                    }
-                    ValueKind::U64 => {
-                        let values: Vec<u64> = (&mut tokens_iter)
-                            .map(|token| token.parse())
-                            .take(count)
-                            .try_collect()?;
-                        Field::U64(values)
-                    }
-                    ValueKind::F32 => {
-                        let values: Vec<f32> = (&mut tokens_iter)
-                            .map(|token| token.parse())
-                            .take(count)
-                            .try_collect()?;
-                        Field::F32(values)
-                    }
-                    ValueKind::F64 => {
-                        let values: Vec<f64> = (&mut tokens_iter)
-                            .map(|token| token.parse())
-                            .take(count)
-                            .try_collect()?;
-                        Field::F64(values)
-                    }
-                };
+            // For padding fields, consume tokens but don't add to fields
+            if name == "_" {
+                for _ in 0..count {
+                    tokens_iter.next();
+                }
+                continue;
+            }
 
-                Ok(field)
-            })
-            .try_collect()?;
+            let field = match kind {
+                ValueKind::I8 => {
+                    let values: Vec<i8> = (&mut tokens_iter)
+                        .map(|token| token.parse())
+                        .take(count)
+                        .try_collect()?;
+                    Field::I8(values)
+                }
+                ValueKind::I16 => {
+                    let values: Vec<i16> = (&mut tokens_iter)
+                        .map(|token| token.parse())
+                        .take(count)
+                        .try_collect()?;
+                    Field::I16(values)
+                }
+                ValueKind::I32 => {
+                    let values: Vec<i32> = (&mut tokens_iter)
+                        .map(|token| token.parse())
+                        .take(count)
+                        .try_collect()?;
+                    Field::I32(values)
+                }
+                ValueKind::I64 => {
+                    let values: Vec<i64> = (&mut tokens_iter)
+                        .map(|token| token.parse())
+                        .take(count)
+                        .try_collect()?;
+                    Field::I64(values)
+                }
+                ValueKind::U8 => {
+                    let values: Vec<u8> = (&mut tokens_iter)
+                        .map(|token| token.parse())
+                        .take(count)
+                        .try_collect()?;
+                    Field::U8(values)
+                }
+                ValueKind::U16 => {
+                    let values: Vec<u16> = (&mut tokens_iter)
+                        .map(|token| token.parse())
+                        .take(count)
+                        .try_collect()?;
+                    Field::U16(values)
+                }
+                ValueKind::U32 => {
+                    let values: Vec<u32> = (&mut tokens_iter)
+                        .map(|token| token.parse())
+                        .take(count)
+                        .try_collect()?;
+                    Field::U32(values)
+                }
+                ValueKind::U64 => {
+                    let values: Vec<u64> = (&mut tokens_iter)
+                        .map(|token| token.parse())
+                        .take(count)
+                        .try_collect()?;
+                    Field::U64(values)
+                }
+                ValueKind::F32 => {
+                    let values: Vec<f32> = (&mut tokens_iter)
+                        .map(|token| token.parse())
+                        .take(count)
+                        .try_collect()?;
+                    Field::F32(values)
+                }
+                ValueKind::F64 => {
+                    let values: Vec<f64> = (&mut tokens_iter)
+                        .map(|token| token.parse())
+                        .take(count)
+                        .try_collect()?;
+                    Field::F64(values)
+                }
+            };
+
+            fields.push(field);
+        }
 
         Ok(Self(fields))
     }

@@ -116,18 +116,18 @@ pub fn load_meta<R: BufRead>(reader: &mut R, line_count: &mut usize) -> Result<P
         let mut name_set = HashSet::new();
         let mut field_names: Vec<String> = vec![];
 
-        for (idx, tk) in tokens[1..].iter().enumerate() {
-            let mut field = tk.clone();
-            if field == "_" {
-                field = format!("unknown_field_{idx}");
+        for tk in tokens[1..].iter() {
+            let field = tk.clone();
+
+            // Padding fields (`_`) are allowed to repeat
+            if field != "_" {
+                if name_set.contains(&field) {
+                    let desc = format!("field name {:?} is specified more than once", field);
+                    return Err(Error::new_parse_error(*line_count, &desc));
+                }
+                name_set.insert(field.clone());
             }
 
-            if name_set.contains(&field) {
-                let desc = format!("field name {:?} is specified more than once", field);
-                return Err(Error::new_parse_error(*line_count, &desc));
-            }
-
-            name_set.insert(field.clone());
             field_names.push(field);
         }
 

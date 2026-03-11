@@ -1,6 +1,13 @@
 //! Types for PCD metadata.
 
-use std::{iter::FromIterator, ops::Index};
+use crate::Result;
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+    iter::FromIterator,
+    ops::Index,
+    path::Path,
+};
 
 /// The struct keep meta data of PCD file.
 #[derive(Debug, Clone, PartialEq)]
@@ -12,6 +19,20 @@ pub struct PcdMeta {
     pub num_points: u64,
     pub data: DataKind,
     pub field_defs: Schema,
+}
+
+impl PcdMeta {
+    /// Read only the PCD header from a file path, without loading point data.
+    pub fn from_path(path: impl AsRef<Path>) -> Result<Self> {
+        let file = BufReader::new(File::open(path.as_ref())?);
+        Self::from_reader(file)
+    }
+
+    /// Read only the PCD header from a reader, without loading point data.
+    pub fn from_reader(mut reader: impl BufRead) -> Result<Self> {
+        let mut line_count = 0;
+        crate::utils::load_meta(&mut reader, &mut line_count)
+    }
 }
 
 /// Represents VIEWPOINT field in meta data.
@@ -89,6 +110,13 @@ pub struct FieldDef {
     pub name: String,
     pub kind: ValueKind,
     pub count: u64,
+}
+
+impl FieldDef {
+    /// Returns true if this field represents PCL-style padding (`_` name).
+    pub fn is_padding(&self) -> bool {
+        self.name == "_"
+    }
 }
 
 /// Define the schema of PCD format.
