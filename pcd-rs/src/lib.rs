@@ -209,6 +209,7 @@ pub mod metas;
 pub mod prelude;
 pub mod reader;
 pub mod record;
+pub mod rgb;
 pub mod traits;
 mod utils;
 pub mod writer;
@@ -219,5 +220,6 @@ pub use metas::{DataKind, FieldDef, PcdMeta, Schema, TypeKind, ValueKind, ViewPo
 pub use pcd_rs_derive::{PcdDeserialize, PcdSerialize};
 pub use reader::{DynReader, Reader};
 pub use record::{DynRecord, Field, PcdDeserialize, PcdSerialize};
+pub use rgb::{float_to_rgb, float_to_rgba, rgb_to_float, rgba_to_float, Rgb, Rgba};
 pub use traits::Value;
 pub use writer::{DynWriter, Writer, WriterInit};

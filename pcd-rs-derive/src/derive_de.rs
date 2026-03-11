@@ -366,6 +366,16 @@ fn make_rw_expr(type_ident: &Ident) -> Option<DerivedTokens> {
                 quote! { reader.read_f64::<LittleEndian>()? },
                 quote! { token.parse::<f64>()? },
             ),
+            "Rgb" => (
+                quote! { ::pcd_rs::metas::ValueKind::F32 },
+                quote! { ::pcd_rs::Rgb::from_packed(reader.read_f32::<LittleEndian>()?) },
+                quote! { ::pcd_rs::Rgb::from_packed(token.parse::<f32>()?) },
+            ),
+            "Rgba" => (
+                quote! { ::pcd_rs::metas::ValueKind::F32 },
+                quote! { ::pcd_rs::Rgba::from_packed(reader.read_f32::<LittleEndian>()?) },
+                quote! { ::pcd_rs::Rgba::from_packed(token.parse::<f32>()?) },
+            ),
             _ => return None,
         };
 

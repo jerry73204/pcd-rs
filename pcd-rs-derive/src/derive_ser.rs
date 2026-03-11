@@ -248,6 +248,16 @@ fn make_rw_expr(type_ident: &Ident) -> Option<DerivedTokens> {
                 quote! { writer.write_f64::<LittleEndian>(value)? },
                 quote! { tokens.push(f64::to_string(&value)) },
             ),
+            "Rgb" => (
+                quote! { ::pcd_rs::metas::ValueKind::F32 },
+                quote! { writer.write_f32::<LittleEndian>(value.to_packed())? },
+                quote! { tokens.push(f32::to_string(&value.to_packed())) },
+            ),
+            "Rgba" => (
+                quote! { ::pcd_rs::metas::ValueKind::F32 },
+                quote! { writer.write_f32::<LittleEndian>(value.to_packed())? },
+                quote! { tokens.push(f32::to_string(&value.to_packed())) },
+            ),
             _ => return None,
         };
 
