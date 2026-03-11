@@ -8,7 +8,7 @@ fn main() -> pcd_rs::Result<()> {
 
     // Test v0.5
     println!("Reading PCD v0.5 (ASCII):");
-    let reader_v05 = DynReader::open("test_files/legacy_v05.pcd")?;
+    let reader_v05 = DynReader::open("pcd-rs/test_files/legacy_v05.pcd")?;
     let meta_v05 = reader_v05.meta().clone();
     println!(
         "  Version: {} | Format: {:?} | Points: {}",
@@ -19,7 +19,7 @@ fn main() -> pcd_rs::Result<()> {
 
     // Test v0.6
     println!("Reading PCD v0.6 (Binary):");
-    let reader_v06 = DynReader::open("test_files/legacy_v06.pcd")?;
+    let reader_v06 = DynReader::open("pcd-rs/test_files/legacy_v06.pcd")?;
     let meta_v06 = reader_v06.meta().clone();
     println!(
         "  Version: {} | Format: {:?} | Points: {}",
@@ -30,7 +30,7 @@ fn main() -> pcd_rs::Result<()> {
 
     // Test real PCL file
     println!("Reading real PCL bunny.pcd (v0.5, 397 points):");
-    let reader_bunny = DynReader::open("test_files/bunny_v05.pcd")?;
+    let reader_bunny = DynReader::open("pcd-rs/test_files/bunny_v05.pcd")?;
     let meta_bunny = reader_bunny.meta().clone();
     println!(
         "  Version: {} | Format: {:?} | Points: {}",
@@ -77,7 +77,7 @@ fn main() -> pcd_rs::Result<()> {
     ]);
 
     // Write compressed PCD v0.7
-    let compressed_path = "test_files/demo_compressed.pcd";
+    let compressed_path = "pcd-rs/test_files/demo_compressed.pcd";
     println!("Writing binary_compressed PCD v0.7...");
     {
         let mut writer = WriterInit {

@@ -10,7 +10,7 @@ pub struct Point {
 }
 
 pub fn main() -> Result<()> {
-    let reader = Reader::open("test_files/ascii.pcd")?;
+    let reader = Reader::open("pcd-rs/test_files/ascii.pcd")?;
     let points: Result<Vec<Point>, _> = reader.collect();
     println!("{} points found", points?.len());
     Ok(())

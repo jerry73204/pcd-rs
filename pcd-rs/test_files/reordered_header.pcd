@@ -1,0 +1,13 @@
+# PCD file with reordered header
+VERSION .7
+WIDTH 2
+HEIGHT 1
+FIELDS x y z
+TYPE F F F
+SIZE 4 4 4
+COUNT 1 1 1
+VIEWPOINT 0 0 0 1 0 0 0
+POINTS 2
+DATA ascii
+1.0 2.0 3.0
+4.0 5.0 6.0

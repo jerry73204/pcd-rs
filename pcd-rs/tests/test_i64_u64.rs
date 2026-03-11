@@ -1,7 +1,6 @@
 //! Tests for I64/U64 (8-byte integer) field type support.
 
 use pcd_rs::{DataKind, DynReader, DynRecord, Field, Schema, ValueKind, WriterInit};
-use std::io::{BufReader, Cursor};
 use tempfile::NamedTempFile;
 
 #[test]
@@ -138,22 +137,7 @@ fn test_i64_u64_compressed_round_trip() -> pcd_rs::Result<()> {
 
 #[test]
 fn test_i64_u64_header_parsing() -> pcd_rs::Result<()> {
-    // Manually construct a PCD header with I64/U64 types and verify parsing
-    let pcd_content = b"# .PCD v.7 - Point Cloud Data file format
-VERSION .7
-FIELDS ts id
-SIZE 8 8
-TYPE I U
-COUNT 1 1
-WIDTH 1
-HEIGHT 1
-VIEWPOINT 0 0 0 1 0 0 0
-POINTS 1
-DATA ascii
--9223372036854775808 18446744073709551615
-";
-
-    let reader = DynReader::from_reader(BufReader::new(Cursor::new(pcd_content.as_slice())))?;
+    let reader = DynReader::open("test_files/i64_u64_ascii.pcd")?;
     let meta = reader.meta();
     assert_eq!(meta.field_defs[0].kind, ValueKind::I64);
     assert_eq!(meta.field_defs[1].kind, ValueKind::U64);

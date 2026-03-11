@@ -5,7 +5,7 @@ use std::path::Path;
 
 fn main() -> pcd_rs::Result<()> {
     // Path to the compressed PCD file
-    let path = Path::new("test_files/test_compressed.pcd");
+    let path = Path::new("pcd-rs/test_files/test_compressed.pcd");
 
     println!("Reading compressed PCD file: {:?}", path);
 

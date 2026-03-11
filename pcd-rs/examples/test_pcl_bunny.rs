@@ -3,7 +3,7 @@ use pcd_rs::DynReader;
 fn main() -> pcd_rs::Result<()> {
     println!("Testing real PCL bunny.pcd file (version 0.5)...\n");
 
-    let reader = DynReader::open("test_files/bunny_v05.pcd")?;
+    let reader = DynReader::open("pcd-rs/test_files/bunny_v05.pcd")?;
     let meta = reader.meta().clone();
 
     println!("Version: {}", meta.version);

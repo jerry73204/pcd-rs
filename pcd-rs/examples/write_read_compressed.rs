@@ -46,7 +46,7 @@ fn main() -> pcd_rs::Result<()> {
             schema: Some(schema.clone()),
             version: None,
         }
-        .create("test_files/output_compressed.pcd")?;
+        .create("pcd-rs/test_files/output_compressed.pcd")?;
 
         for point in &points {
             writer.push(point)?;
@@ -62,7 +62,7 @@ fn main() -> pcd_rs::Result<()> {
     // Read it back
     {
         println!("\nReading back the compressed file...");
-        let reader = DynReader::open("test_files/output_compressed.pcd")?;
+        let reader = DynReader::open("pcd-rs/test_files/output_compressed.pcd")?;
 
         let meta = reader.meta();
         println!("  Data format: {:?}", meta.data);
@@ -100,15 +100,15 @@ fn main() -> pcd_rs::Result<()> {
             schema: Some(schema),
             version: None,
         }
-        .create("test_files/output_binary.pcd")?;
+        .create("pcd-rs/test_files/output_binary.pcd")?;
 
         for point in &points {
             writer.push(point)?;
         }
         writer.finish()?;
 
-        let compressed_size = fs::metadata("test_files/output_compressed.pcd")?.len();
-        let binary_size = fs::metadata("test_files/output_binary.pcd")?.len();
+        let compressed_size = fs::metadata("pcd-rs/test_files/output_compressed.pcd")?.len();
+        let binary_size = fs::metadata("pcd-rs/test_files/output_binary.pcd")?.len();
 
         println!("  Binary size: {} bytes", binary_size);
         println!("  Compressed size: {} bytes", compressed_size);

@@ -34,7 +34,7 @@ fn main() -> pcd_rs::Result<()> {
             schema: Some(schema.clone()),
             version: Some("0.5".to_string()),
         }
-        .create("test_files/demo_v05.pcd")?;
+        .create("pcd-rs/test_files/demo_v05.pcd")?;
 
         for point in &points {
             writer.push(point)?;
@@ -53,7 +53,7 @@ fn main() -> pcd_rs::Result<()> {
             schema: Some(schema.clone()),
             version: Some("0.6".to_string()),
         }
-        .create("test_files/demo_v06.pcd")?;
+        .create("pcd-rs/test_files/demo_v06.pcd")?;
 
         for point in &points {
             writer.push(point)?;
@@ -72,7 +72,7 @@ fn main() -> pcd_rs::Result<()> {
             schema: Some(schema.clone()),
             version: Some("0.7".to_string()),
         }
-        .create("test_files/demo_v07.pcd")?;
+        .create("pcd-rs/test_files/demo_v07.pcd")?;
 
         for point in &points {
             writer.push(point)?;
@@ -90,7 +90,7 @@ fn main() -> pcd_rs::Result<()> {
         schema: Some(schema),
         version: Some("0.5".to_string()),
     }
-    .create::<DynRecord, _>("test_files/demo_v05_compressed_fail.pcd");
+    .create::<DynRecord, _>("pcd-rs/test_files/demo_v05_compressed_fail.pcd");
 
     match result {
         Ok(_) => println!("ERROR: Should have failed!"),

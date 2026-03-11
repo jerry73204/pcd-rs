@@ -6,7 +6,7 @@ fn main() -> pcd_rs::Result<()> {
     // Test version 0.5 (ASCII)
     println!("=== Testing PCD version 0.5 ===");
     {
-        let reader = DynReader::open("test_files/legacy_v05.pcd")?;
+        let reader = DynReader::open("pcd-rs/test_files/legacy_v05.pcd")?;
         let meta = reader.meta();
 
         println!("Version: {}", meta.version);
@@ -46,7 +46,7 @@ fn main() -> pcd_rs::Result<()> {
     // Test version 0.6 (Binary)
     println!("=== Testing PCD version 0.6 ===");
     {
-        let reader = DynReader::open("test_files/legacy_v06.pcd")?;
+        let reader = DynReader::open("pcd-rs/test_files/legacy_v06.pcd")?;
         let meta = reader.meta();
 
         println!("Version: {}", meta.version);

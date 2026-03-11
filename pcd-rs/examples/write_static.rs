@@ -11,7 +11,7 @@ pub struct Point {
 
 pub fn main() -> Result<()> {
     // output path
-    let path = "test_files/dump_ascii_static.pcd";
+    let path = "pcd-rs/test_files/dump_ascii_static.pcd";
 
     // point data
     let dump_points = [

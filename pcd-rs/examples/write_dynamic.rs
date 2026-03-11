@@ -4,7 +4,7 @@ use std::iter::FromIterator;
 
 fn main() -> Result<()> {
     // output path
-    let path = "test_files/dump_ascii_untyped.pcd";
+    let path = "pcd-rs/test_files/dump_ascii_untyped.pcd";
 
     // point data
     let dump_points = vec![
