@@ -10,38 +10,29 @@ pcd-rs is a Rust library for reading and writing PCD (Point Cloud Data) file for
 
 ## Common Development Commands
 
-### Building
+Use `just` to run common tasks:
+
 ```bash
-cargo build                    # Build all workspace members
-cargo build --all-features     # Build with all features including derive
-cargo build -p pcd-rs          # Build only pcd-rs crate
-cargo build -p pcd-rs-derive   # Build only pcd-rs-derive crate
+just build     # Build all targets with dev-release profile
+just format    # Format code with nightly rustfmt
+just check     # Check formatting and run clippy
+just test      # Run tests with nextest
+just ci        # Run check + test (used in CI)
+just clean     # Remove build artifacts
 ```
 
-### Testing
+### Running specific tests
 ```bash
-cargo test                              # Run all tests in workspace
-cargo test -p pcd-rs                    # Test only pcd-rs crate
-cargo test -p pcd-rs-derive             # Test only pcd-rs-derive crate
-cargo test --all-features               # Test with all features enabled
-cargo test test_name                    # Run specific test by name
-cargo test --test test_file_name        # Run specific test file
+cargo nextest run --cargo-profile dev-release --all-features test_name       # Run specific test by name
+cargo nextest run --cargo-profile dev-release --all-features --test test_file # Run specific test file
 ```
 
-### Code Quality
+### Running examples
 ```bash
-cargo fmt                      # Format code using rustfmt
-cargo fmt --check              # Check formatting without modifying
-cargo clippy                   # Run clippy linter
-cargo clippy --all-features    # Run clippy with all features
-```
-
-### Examples
-```bash
-cargo run --example read_dynamic         # Run dynamic reader example
-cargo run --example write_dynamic        # Run dynamic writer example
-cargo run --example read_static --features derive   # Run static reader (requires derive feature)
-cargo run --example write_static --features derive  # Run static writer (requires derive feature)
+cargo run --example read_dynamic                        # Dynamic reader example
+cargo run --example write_dynamic                       # Dynamic writer example
+cargo run --example read_static --features derive       # Static reader (requires derive feature)
+cargo run --example write_static --features derive      # Static writer (requires derive feature)
 ```
 
 ## Architecture
@@ -49,16 +40,19 @@ cargo run --example write_static --features derive  # Run static writer (require
 ### Core Components
 
 **pcd-rs crate:**
-- `reader.rs`: Contains `DynReader` (dynamic schema) and `Reader` (static schema with derive feature)
-- `writer.rs`: Contains `DynWriter` and `Writer` implementations with `WriterInit` builder
-- `record.rs`: Defines `DynRecord` and `Field` types for dynamic point representation
+- `reader.rs`: `DynReader` (dynamic schema) and `Reader` (static schema with derive feature)
+- `writer.rs`: `DynWriter` and `Writer` implementations with `WriterInit` builder
+- `record.rs`: `DynRecord` and `Field` types for dynamic point representation
 - `metas.rs`: PCD metadata structures (`Schema`, `ValueKind`, `DataKind`, etc.)
+- `rgb.rs`: `Rgb`/`Rgba` wrapper types and PCL-style packed float conversion helpers
+- `lzf.rs`: LZF compression/decompression for `binary_compressed` format
 - `traits.rs`: Core traits like `PcdSerialize`, `PcdDeserialize`, and `Value`
 - `error.rs`: Error types and result aliases
 
 **pcd-rs-derive crate:**
 - Procedural macros for `PcdSerialize` and `PcdDeserialize` derive implementations
 - Supports field attributes: `#[pcd(rename = "...")]` and `#[pcd(ignore)]`
+- Supports types: `u8`, `u16`, `u32`, `u64`, `i8`, `i16`, `i32`, `i64`, `f32`, `f64`, `Rgb`, `Rgba`
 
 ### Key Design Patterns
 
@@ -66,7 +60,14 @@ cargo run --example write_static --features derive  # Run static writer (require
 2. **Builder Pattern**: `WriterInit` configures and creates writers
 3. **Iterator Pattern**: Readers implement Iterator trait for streaming point data
 4. **Type Safety**: Static API uses derive macros for compile-time schema validation
+5. **PCD Version Support**: Supports v0.5, v0.6, and v0.7 formats (binary_compressed is v0.7 only)
 
 ### Test Files Location
-- Test PCD files are located in `test_files/` directory
-- Tests read from and write to this directory for validation
+- Test PCD fixture files are in `pcd-rs/test_files/`
+- Tests and doctests run from the crate directory (`pcd-rs/`), so paths use `"test_files/..."`
+- Examples run from the workspace root, so paths use `"pcd-rs/test_files/..."`
+
+### CI/CD
+- GitHub Actions workflow runs `just ci` on pushes to master and PRs
+- Publishing is triggered by `pcd-rs@x.y.z` or `pcd-rs-derive@x.y.z` tags
+- Requires `CARGO_REGISTRY_TOKEN` secret for crates.io publication
