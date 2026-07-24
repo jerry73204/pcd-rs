@@ -132,6 +132,36 @@ where
                 // Empty compressed data
                 Some(Cursor::new(Vec::new()))
             } else {
+                // The uncompressed payload of a binary_compressed section is the
+                // column-major point array whose length is fully determined by the
+                // ASCII header: sum(field.byte_size * field.count) * num_points. Treat
+                // the body's `uncompressed_size` as a verifiable value, not a primary
+                // allocation driver: reject on mismatch with the header-derived
+                // expected size before preallocating. Mirrors PCL's `readBodyBinary`,
+                // which sizes `cloud.data` from `nr_points * point_step` and flags any
+                // divergence as corruption. Prevents an attacker-controlled `u32` from
+                // driving a multi-GiB allocation regardless of the declared point count.
+                let num_points = meta.num_points as usize;
+                let field_byte_sizes: Vec<usize> = meta
+                    .field_defs
+                    .iter()
+                    .map(|f| f.kind.byte_size() * f.count as usize)
+                    .collect();
+                let record_size: usize = field_byte_sizes.iter().sum();
+                let expected_uncompressed =
+                    record_size.checked_mul(num_points).ok_or_else(|| {
+                        Error::new_parse_error(
+                        0,
+                        "binary_compressed size overflow: record_size * num_points exceeds usize",
+                    )
+                    })?;
+                if uncompressed_size as usize != expected_uncompressed {
+                    return Err(Error::new_parse_error(
+                        0,
+                        "binary_compressed uncompressed_size does not match header-derived size",
+                    ));
+                }
+
                 // Read compressed data
                 let mut compressed_data = vec![0u8; compressed_size as usize];
                 reader.read_exact(&mut compressed_data)?;
@@ -140,18 +170,9 @@ where
                 let col_major = lzf::decompress(&compressed_data, uncompressed_size as usize)?;
 
                 // Transpose from column-major to row-major so read_chunk works
-                let num_points = meta.num_points as usize;
                 if num_points == 0 {
                     Some(Cursor::new(col_major))
                 } else {
-                    // Calculate per-field byte sizes and record size
-                    let field_byte_sizes: Vec<usize> = meta
-                        .field_defs
-                        .iter()
-                        .map(|f| f.kind.byte_size() * f.count as usize)
-                        .collect();
-                    let record_size: usize = field_byte_sizes.iter().sum();
-
                     let mut row_major = vec![0u8; col_major.len()];
 
                     // column_start[f] is the byte offset where field f's column begins
