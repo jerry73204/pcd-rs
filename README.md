@@ -19,4 +19,4 @@ Run `cargo run --example` to list all available example binaries.
 
 ## License
 
-MIT license. See [LICESE](LICENSE) file.
+MIT license. See [LICENSE](LICENSE) file.
